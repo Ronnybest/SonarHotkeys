@@ -1,90 +1,102 @@
+<div align="center">
+
 # SonarHotkeys
 
-[English documentation](README.en.md)
+**Switch SteelSeries Sonar presets and output devices with global hotkeys.**
 
-Приложение для Windows, которое переключает пресеты SteelSeries Sonar и устройства вывода глобальными горячими клавишами или из меню в трее.
+[![Latest release](https://img.shields.io/github/v/release/Ronnybest/SonarHotkeys?label=release)](https://github.com/Ronnybest/SonarHotkeys/releases/latest) [![Downloads](https://img.shields.io/github/downloads/Ronnybest/SonarHotkeys/total)](https://github.com/Ronnybest/SonarHotkeys/releases) [![License: MIT](https://img.shields.io/github/license/Ronnybest/SonarHotkeys)](LICENSE.txt) ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D4) ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 
-Каждый пользователь выбирает собственные пресеты, устройства и сочетания через окно настройки. Пересборка и редактирование исходников не нужны. При первом запуске нет назначенных клавиш и привязок к чужим пресетам.
+[**Download**](https://github.com/Ronnybest/SonarHotkeys/releases/latest) · [Changelog](CHANGELOG.md) · [Русский](README.ru.md)
 
-## Скачать и запустить
+<img src="docs/screenshot.png" alt="SonarHotkeys settings window with three preset bindings" width="820">
 
-1. Скачайте архив `SonarHotkeys-win-x64.zip` из [последнего релиза](https://github.com/Ronnybest/SonarHotkeys/releases/latest).
-2. Распакуйте его в любую папку и запустите `SonarHotkeys.exe`.
-3. Установите и запустите SteelSeries GG, включите Sonar.
+</div>
 
-Готовая сборка предназначена для Windows x64 и содержит .NET: отдельно устанавливать .NET или Visual Studio не нужно. Приложение работает через локальный API GG и не связано со SteelSeries официально.
+## Why
 
-## Первая настройка
+Changing a Sonar preset and output device together usually means opening GG and clicking through Sonar's settings. SonarHotkeys sits in the tray and does both with a keystroke: press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F1</kbd> for your game preset on speakers, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F2</kbd> for your FPS preset on headphones.
 
-Выберите **Русский** или **English** в поле **Язык / Language** вверху окна. Язык интерфейса, меню в трее и сообщений меняется сразу и сохраняется отдельно от незавершённых привязок. При первой установке используется русский для русскоязычной Windows, иначе английский.
+## Features
 
-1. В GG отметьте нужные пресеты канала **Game** как избранные.
-2. В SonarHotkeys нажмите **Обновить из Sonar**. Приложение прочитает пресеты и устройства вашего компьютера.
-3. Нажмите **Добавить** для каждой нужной привязки. Выберите пресет из списка.
-4. Выберите физическое устройство вывода или оставьте **Не менять устройство**, если хотите переключать только пресет.
-5. Откройте ячейку сочетания двойным щелчком и нажмите желаемое сочетание с Ctrl, Alt или Shift. Например, Ctrl+Alt+1. Delete или Backspace очищает назначение.
-6. При необходимости задайте отдельное сочетание для перебора пресетов в поле под таблицей.
-7. Нажмите **Сохранить**. Только после этого новые сочетания и привязки начинают работать.
+- **One hotkey, preset and output together.** Each binding selects a Game preset and, optionally, a physical output device.
+- **Cycle hotkey.** A separate shortcut steps through your configured presets, starting from the one currently selected in GG.
+- **Tray menu.** Pick any configured preset without opening the window.
+- **Safe switching.** If Sonar rejects part of a change, the previous preset and outputs are restored.
+- **English and Russian interface**, switchable at any time.
+- **Portable.** One self-contained `.exe`: no installer, no .NET runtime to install.
 
-Можно добавить разные избранные пресеты. Кнопка **Применить строку** проверяет выбранную привязку ещё до сохранения. Пустое сочетание оставляет пресет доступным через трей и перебор. Каждое сочетание и каждый пресет должны встречаться в таблице один раз.
+## Requirements
 
-## Как переключается звук
+- Windows 10 or 11, x64
+- [SteelSeries GG](https://steelseries.com/gg) with Sonar enabled
 
-- В режиме **Classic** выбранное устройство устанавливается для **Game, Chat, Media и Aux**.
-- В режиме **Streamer** меняется устройство выхода **Personal**.
-- Пресет меняется только для **Game**.
-- Приложение меняет маршрутизацию Sonar; устройство по умолчанию в настройках Windows не меняется. Программы должны выводить звук через виртуальные каналы Sonar.
-- При частичной ошибке приложение пытается восстановить предыдущие настройки и сообщает результат.
+## Quick start
 
-Перебор следует порядку строк таблицы и учитывает пресет, выбранный непосредственно в GG. Пресеты, отсутствующие в Sonar или удалённые из избранного, пропускаются. Меню в трее показывает сохранённые избранные пресеты и применяет их вместе с назначенными устройствами.
+1. Download `SonarHotkeys-win-x64.zip` from the [latest release](https://github.com/Ronnybest/SonarHotkeys/releases/latest), extract it anywhere and run `SonarHotkeys.exe`.
+2. In GG, mark the **Game** presets you want to use as favorites.
+3. In SonarHotkeys, click **Refresh from Sonar**, then **Add** a row for each preset.
+4. Choose an output device, or keep **Keep current device** to switch only the preset.
+5. Double-click the shortcut cell and press a combination with <kbd>Ctrl</kbd>, <kbd>Alt</kbd> or <kbd>Shift</kbd>. <kbd>Delete</kbd> clears it.
+6. Click **Save**. Your hotkeys work immediately, even with the window closed.
 
-## Трей и уведомления
+**Apply selected** tries a row before you save it. Each preset and each shortcut may appear only once. A row without a shortcut is still available from the tray menu and the cycle hotkey.
 
-Закрытие окна скрывает приложение в трей. Двойной щелчок по значку или пункт **Настройки** открывает окно. Для завершения выберите **Выход**. Повторный запуск не создаёт вторую копию, а открывает окно уже запущенной.
+## How switching works
 
-Аргумент `--tray` запускает настроенное приложение со скрытым окном. При отсутствии сохранённых привязок окно первой настройки открывается независимо от этого аргумента. В Debug-сборке окно показывается всегда, аргумент игнорируется.
-
-Уведомления показывают выбранный пресет и устройство либо причину ошибки. Щелчок по уведомлению открывает окно с полным сообщением. Если Windows скрывает уведомления, проверьте настройки уведомлений и режим «Не беспокоить».
-
-## Настройки и обновления
-
-Настройки каждого пользователя хранятся в `%LOCALAPPDATA%\SonarHotkeys\settings.json`, отдельно от EXE. В файле находятся локальные идентификаторы и названия пресетов и устройств. Он не включается в архив релиза и не нужен другим пользователям.
-
-Для обновления завершите приложение через трей и замените EXE новой версией. Сохранённые привязки и выбор языка останутся. Изменения каждой версии описаны в [журнале изменений](CHANGELOG.md). Для переноса на другой компьютер выберите пресеты и устройства заново: их идентификаторы могут отличаться.
-
-Если настройки повреждены, приложение откроет пустую конфигурацию и покажет ошибку. Повреждённый файл не перезаписывается автоматически. Для сброса завершите приложение и удалите или переименуйте файл настроек.
-
-## Решение проблем
-
-| Проблема | Что сделать |
+| Sonar mode | What changes |
 | --- | --- |
-| GG или Sonar недоступен | Запустить GG, включить Sonar, затем обновить список |
-| Нет пресетов в списке | Добавить пресеты Game в избранное в GG |
-| Устройство отсутствует | Подключить его, обновить список и выбрать доступное устройство |
-| Сочетание занято | Выбрать другое сочетание; при ошибке сохранения остаются прежние привязки |
-| Пресет удалён или заменён | Обновить список и выбрать его заново |
+| Classic | Output device of the **Game, Chat, Media** and **Aux** channels |
+| Streamer | Output device of the **Personal** mix |
+| Both | The selected **Game** preset |
 
-## Сборка из исходников
+SonarHotkeys changes Sonar's routing only; the Windows default output device stays the same, so applications must play through Sonar's virtual devices.
 
-Нужны Windows и .NET 10 SDK. Из корня репозитория:
+## Tray and startup
+
+Closing the window hides it to the tray. Double-click the tray icon or choose **Settings** to reopen it, and **Exit** to quit. Starting the app again brings up the window of the running instance.
+
+| Argument | Effect |
+| --- | --- |
+| `--tray` | Start hidden in the tray. Ignored until at least one binding is saved, and in Debug builds. |
+
+To start with Windows, put a shortcut to `SonarHotkeys.exe --tray` into `shell:startup`.
+
+## Settings
+
+Settings are stored per user in `%LOCALAPPDATA%\SonarHotkeys\settings.json`. To update, exit from the tray and replace the `.exe`; your bindings are kept. Preset and device IDs are specific to each computer, so set them up again on a new machine.
+
+A damaged settings file is never overwritten automatically: the app starts with an empty configuration and shows the error. To reset, exit the app and delete the file.
+
+## Troubleshooting
+
+| Problem | Solution |
+| --- | --- |
+| "GG or Sonar is unavailable" | Start GG, enable Sonar, then click **Refresh from Sonar** |
+| No presets in the list | Mark Game presets as favorites in GG and refresh |
+| An output device is missing | Connect it, refresh and choose it again |
+| "The shortcut is in use" | Another application or Windows owns it; choose a different combination |
+| No notifications | Check Windows notification settings and Do Not Disturb |
+
+## Building from source
+
+Requires Windows and the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```powershell
 dotnet build SonarHotkeys.slnx -c Release
 dotnet run --project tests/SonarHotkeys.Checks/SonarHotkeys.Checks.csproj -c Release
-```
-
-Проверки работают с временными файлами настроек и не трогают ваши настройки и маршрутизацию Sonar. Они также проверяют, что у каждого текста интерфейса есть английский перевод.
-
-Для создания самостоятельного EXE и архива для распространения:
-
-```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Publish.ps1
 ```
 
-Результат: `artifacts/SonarHotkeys-win-x64.zip`. Скрипт включает только EXE, инструкции на двух языках, журнал изменений и лицензии. Настройки с компьютера разработчика не копируются. Архив прикрепляется к релизу на GitHub.
+The checks use temporary settings files and never touch your real settings or Sonar routing. `Publish.ps1` produces `artifacts/SonarHotkeys-win-x64.zip` with the executable, documentation and licenses only.
 
-## Переводы
+## Contributing
 
-Тексты интерфейса написаны в коде по-русски, и русский текст служит ключом перевода. Английские переводы лежат в `SonarHotkeys/Translations.json`, который встраивается в EXE. При добавлении или изменении текста обновите запись в этом файле: проверки упадут, если перевода нет или он больше не используется.
+Issues and pull requests are welcome.
 
-Лицензия проекта: [MIT](LICENSE.txt). Используемая библиотека: [SteelSeries-NET-API](https://github.com/DataNext27/SteelSeries-NET-API). Сведения о зависимостях: [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES.md).
+Interface texts are written in Russian in the source code, and the Russian text is the translation key. English translations live in [`SonarHotkeys/Translations.json`](SonarHotkeys/Translations.json). When you add or change a text, update that file as well; the checks fail if a translation is missing or unused.
+
+## License
+
+[MIT](LICENSE.txt). Built on [SteelSeries-NET-API](https://github.com/DataNext27/SteelSeries-NET-API); see [third-party notices](THIRD-PARTY-NOTICES.md).
+
+SonarHotkeys is an independent project and is not affiliated with or endorsed by SteelSeries.

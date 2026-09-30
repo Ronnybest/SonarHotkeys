@@ -1,5 +1,5 @@
 # SonarHotkeys
 
-Инструкция по установке, настройке и сборке находится в [README репозитория](../README.md).
+Application project. Installation, setup and build instructions are in the [repository README](../README.md) ([на русском](../README.ru.md)).
 
-Приложение начинает работу с пустыми привязками. Пресеты и устройства загружаются из Sonar на компьютере пользователя; готовые личные настройки в сборку не входят.
+The application starts with no bindings: presets and devices are discovered from Sonar on the user's computer, and no personal settings are bundled into the build.
