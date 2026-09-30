@@ -24,6 +24,8 @@ public static class Program
             showRequest.Set();
             return 0;
         }
+        // After an MSI upgrade closes the app, Windows starts it again in the tray.
+        Native.RegisterApplicationRestart("--tray", Native.RESTART_NO_CRASH | Native.RESTART_NO_HANG | Native.RESTART_NO_REBOOT);
         Application.Start(_ =>
         {
             var dispatcher = DispatcherQueue.GetForCurrentThread();

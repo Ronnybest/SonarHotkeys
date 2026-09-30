@@ -32,6 +32,9 @@ internal sealed unsafe class TrayHost : IDisposable
     public event Action? MenuRequested;
     public event Action? BalloonClicked;
 
+    /// <summary>Windows is signing out or shutting down, or an installer asked the app to close.</summary>
+    public event Action? SessionEnding;
+
     public TrayHost(string tip)
     {
         if (_instance != null) throw new InvalidOperationException("Only one tray host is supported.");
@@ -174,6 +177,13 @@ internal sealed unsafe class TrayHost : IDisposable
                 case WM_CONTEXTMENU: MenuRequested?.Invoke(); break;
                 case NIN_BALLOONUSERCLICK: BalloonClicked?.Invoke(); break;
             }
+            return true;
+        }
+        // The settings window only hides on close, so the session end is handled here: this is how the
+        // Restart Manager closes the app during an MSI upgrade. WM_QUERYENDSESSION falls through (allowed).
+        if (message == WM_ENDSESSION)
+        {
+            if (wParam != 0) SessionEnding?.Invoke();
             return true;
         }
         if (message == _taskbarCreated && _taskbarCreated != 0)

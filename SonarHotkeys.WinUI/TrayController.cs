@@ -9,9 +9,10 @@ namespace SonarHotkeys;
 internal sealed class TrayController
 {
     private const int CycleId = 10000;
-    private const int MenuSettings = 1, MenuNext = 2, MenuRefresh = 3, MenuExit = 4, MenuPresetBase = 100;
+    private const int MenuSettings = 1, MenuNext = 2, MenuRefresh = 3, MenuExit = 4, MenuAutostart = 5, MenuPresetBase = 100;
     private readonly string _settingsPath;
     private readonly SonarService _sonar;
+    private readonly Autostart _autostart = new();
     private readonly CancellationTokenSource _lifetime = new();
     private readonly Dictionary<int, PresetBinding> _hotkeys = [];
     private TrayHost? _host;
@@ -38,6 +39,7 @@ internal sealed class TrayController
     public AppSettings Settings => _settings;
     public bool IsBusy => _busy;
     public nint WindowIcon => _host?.WindowIcon ?? 0;
+    public bool StartsWithWindows => _autostart.IsEnabled;
     public (string Text, bool Error)? LastMessage { get; private set; }
 
     public string T(string key, params object[] arguments) => TextCatalog.Get(key, _settings.Language, arguments);
@@ -51,7 +53,14 @@ internal sealed class TrayController
         _host.IconClicked += ShowWindow;
         _host.BalloonClicked += ShowWindow;
         _host.MenuRequested += ShowMenu;
+        _host.SessionEnding += Exit;
         RegisterHotkeys();
+#if !DEBUG
+        // A moved portable folder would leave the Run entry pointing at the old path.
+        // Skipped in Debug builds, so running one never redirects the real entry.
+        try { _autostart.Refresh(Environment.ProcessPath!); }
+        catch (Exception ex) { Report(T("Autostart.Failed", ex.Message), error: true); }
+#endif
         // A fresh installation always shows setup, even if launched with --tray.
         if (!startHidden || _settings.Bindings.Count == 0 || _startupError != null) ShowWindow();
         if (_startupError != null) Report(_startupError, error: true);
@@ -154,6 +163,17 @@ internal sealed class TrayController
         Report(T("Status.Saved"));
     }
 
+    public void SetStartWithWindows(bool enabled)
+    {
+        try
+        {
+            if (enabled) _autostart.Enable(Environment.ProcessPath!);
+            else _autostart.Disable();
+        }
+        catch (Exception ex) { Report(T("Autostart.Failed", ex.Message), error: true); }
+        _window?.UpdateAutostart();
+    }
+
     public void ChangeLanguage(string language)
     {
         if (language == _settings.Language) return;
@@ -235,12 +255,14 @@ internal sealed class TrayController
             new(T("Tray.Next"), MenuNext, !_busy && presets.Count > 0),
             new(T("Toolbar.Refresh"), MenuRefresh, !_busy),
             TrayMenuItem.Separator,
+            new(T("Autostart.Label"), MenuAutostart, Checked: StartsWithWindows),
             new(T("Tray.Exit"), MenuExit),
         };
         int command = _host.ShowMenu(menu);
         switch (command)
         {
             case MenuSettings: ShowWindow(); break;
+            case MenuAutostart: SetStartWithWindows(!StartsWithWindows); break;
             case MenuNext: _ = CycleAsync(); break;
             case MenuRefresh: _ = RefreshAsync(); break;
             case MenuExit: Exit(); break;

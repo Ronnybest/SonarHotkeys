@@ -23,7 +23,7 @@ public sealed partial class MainWindow : Window
     private readonly DispatcherTimer _statusTimer = new();
     private List<ChoiceItem> _presets = [], _devices = [];
     private readonly Dictionary<string, RadioMenuFlyoutItem> _languageItems = [];
-    private bool _exiting, _capturing;
+    private bool _exiting, _capturing, _updatingAutostart;
 
     public ObservableCollection<BindingRow> Rows { get; } = [];
 
@@ -47,6 +47,7 @@ public sealed partial class MainWindow : Window
         // so switching to a game right after capturing a shortcut already uses it.
         Activated += (_, e) =>
         {
+            if (e.WindowActivationState != WindowActivationState.Deactivated) HideInitialFocusVisual();
             if (!_capturing) return;
             if (e.WindowActivationState == WindowActivationState.Deactivated) _app.ResumeHotkeys();
             else _app.SuspendHotkeys();
@@ -65,6 +66,7 @@ public sealed partial class MainWindow : Window
         ApplyLanguage();
         EmptyText.Visibility = Rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         SetBusy(_app.IsBusy);
+        UpdateAutostart();
         if (_app.LastMessage is { } last) ShowStatus(last.Text, last.Error);
     }
 
@@ -102,6 +104,8 @@ public sealed partial class MainWindow : Window
     public void ShowAndActivate()
     {
         if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized } presenter) presenter.Restore();
+        // The tray menu can change it while the window is hidden.
+        UpdateAutostart();
         AppWindow.Show();
         Activate();
         Native.SetForegroundWindow(_hwnd);
@@ -129,6 +133,7 @@ public sealed partial class MainWindow : Window
         AutomationProperties.SetName(RefreshButton, RefreshText.Text);
         AutomationProperties.SetName(AddButton, AddText.Text);
         AutomationProperties.SetName(NextButton, NextText.Text);
+        AutostartSwitch.OnContent = AutostartSwitch.OffContent = T("Autostart.Label");
         foreach (var (code, item) in _languageItems) item.IsChecked = code == _app.Settings.Language;
         LanguageButton.Content = TextCatalog.Languages.FirstOrDefault(l => l.Code == _app.Settings.Language)?.Name;
         foreach (var row in Rows) row.SetText(T);
@@ -203,6 +208,29 @@ public sealed partial class MainWindow : Window
         }
         ElementCompositionPreview.SetImplicitShowAnimation(StatusPanel, Animation(0, 1, 12, 0, 200));
         ElementCompositionPreview.SetImplicitHideAnimation(StatusPanel, Animation(1, 0, 0, 12, 150));
+    }
+
+    // On activation WinUI focuses the first control as if reached with Tab, which draws a white focus rectangle
+    // around the language button. Focusing it again programmatically keeps the focus but hides the rectangle;
+    // Tab still shows it as usual.
+    private void HideInitialFocusVisual() =>
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            if (Content.XamlRoot is { } root && FocusManager.GetFocusedElement(root) is Control { FocusState: FocusState.Keyboard } control
+                && control is not TextBox)
+                control.Focus(FocusState.Programmatic);
+        });
+
+    public void UpdateAutostart()
+    {
+        _updatingAutostart = true;
+        AutostartSwitch.IsOn = _app.StartsWithWindows;
+        _updatingAutostart = false;
+    }
+
+    private void OnAutostartToggled(object sender, RoutedEventArgs e)
+    {
+        if (!_updatingAutostart) _app.SetStartWithWindows(AutostartSwitch.IsOn);
     }
 
     private void BuildLanguageMenu()

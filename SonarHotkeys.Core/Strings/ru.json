@@ -25,6 +25,8 @@
   "Tray.Favorites": "Избранные пресеты",
   "Tray.Next": "Следующий пресет",
   "Tray.Exit": "Выход",
+  "Autostart.Label": "Запускать вместе с Windows",
+  "Autostart.Failed": "Не удалось изменить автозапуск. {0}",
   "Notification.ErrorTitle": "SonarHotkeys — ошибка",
   "Notification.SwitchedTitle": "Sonar — выбран пресет",
 

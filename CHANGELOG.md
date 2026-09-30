@@ -1,5 +1,23 @@
 # Changelog / Журнал изменений
 
+## 2.1.0 — 2026-10-01
+
+Installer and starting with Windows. / Установщик и запуск вместе с Windows.
+
+### English
+
+- New `SonarHotkeys-win-x64.msi` installer. It installs for the current user into `%LOCALAPPDATA%\Programs\SonarHotkeys` without administrator rights, adds a Start menu shortcut and an entry in Settings → Apps, and can start the app when it finishes. The portable ZIP is still available.
+- Installing a new MSI over an older one closes the running app, replaces it and starts it again. Settings are kept.
+- **Start with Windows** switch in the window and the tray menu. It adds a shortcut to your Startup folder that starts the app hidden in the tray; a moved portable folder updates it, and uninstalling the MSI removes it.
+- The app now exits properly when Windows signs out or shuts down, or an installer asks it to close, instead of only hiding its window.
+
+### Русский
+
+- Новый установщик `SonarHotkeys-win-x64.msi`. Он ставит программу для текущего пользователя в `%LOCALAPPDATA%\Programs\SonarHotkeys` без прав администратора, добавляет ярлык в «Пуск» и запись в «Параметры → Приложения» и может запустить программу по окончании. Портативный ZIP остаётся.
+- Установка нового MSI поверх старого закрывает работающую программу, заменяет её и запускает снова. Настройки сохраняются.
+- Переключатель **Запускать вместе с Windows** в окне и в меню трея. Он добавляет в папку «Автозагрузка» ярлык, который запускает программу со скрытым окном в трее; при переносе портативной папки ярлык обновляется, а удаление MSI убирает его.
+- Программа теперь корректно завершается при выходе из системы, выключении или по просьбе установщика, а не просто прячет окно.
+
 ## 2.0.0 — 2026-09-30
 
 New WinUI 3 interface. / Новый интерфейс на WinUI 3.

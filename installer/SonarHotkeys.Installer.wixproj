@@ -1,0 +1,23 @@
+<!-- Built by scripts/Publish.ps1, which passes AppDir (the published app folder), ProductVersion and LicenseRtf.
+     WiX 5: from version 6 on, WiX requires accepting its Open Source Maintenance Fee EULA. -->
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <OutputName>SonarHotkeys-win-x64</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <Cultures>en-US</Cultures>
+    <!-- WIX1077: WixShellExecTarget holds [INSTALLFOLDER] on purpose; WixShellExec formats it. -->
+    <SuppressSpecificWarnings>1077</SuppressSpecificWarnings>
+    <!-- ICE03: some Windows App SDK DLLs declare several languages in their version resource, which does not fit the
+         File table's Language column. It only matters when two copies of a file share a version, which never happens here. -->
+    <SuppressIces>ICE03</SuppressIces>
+    <DefineConstants>ProductVersion=$(ProductVersion);LicenseRtf=$(LicenseRtf)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <BindPath Include="$(AppDir)" BindName="App" />
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+</Project>

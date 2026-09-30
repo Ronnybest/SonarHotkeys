@@ -71,6 +71,7 @@
                     </StackPanel>
                 </Button>
             </StackPanel>
+            <ToggleSwitch x:Name="AutostartSwitch" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="0" Toggled="OnAutostartToggled" />
         </Grid>
 
         <Grid Grid.Row="3">

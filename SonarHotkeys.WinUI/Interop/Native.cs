@@ -120,6 +120,13 @@ internal static unsafe partial class Native
     [LibraryImport("user32.dll", EntryPoint = "LoadIconW")]
     public static partial nint LoadIcon(nint instance, nint name);
 
+    public const uint WM_ENDSESSION = 0x0016;
+    // Restart only after an update closed the app, not after a crash, hang or reboot.
+    public const uint RESTART_NO_CRASH = 1, RESTART_NO_HANG = 2, RESTART_NO_REBOOT = 8;
+
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int RegisterApplicationRestart(string commandLine, uint flags);
+
     public const uint IMAGE_ICON = 1;
     public const int SM_CXICON = 11, SM_CXSMICON = 49;
 

@@ -24,7 +24,8 @@ Changing a Sonar preset and output device together usually means opening GG and 
 - **Safe switching.** If Sonar rejects part of a change, the previous preset and outputs are restored.
 - **English and Russian interface**, switchable at any time; more languages can be added as a single file.
 - **Native Windows look.** WinUI 3 with Mica and light and dark themes that follow Windows.
-- **Portable.** Extract the folder and run: no installer, and no .NET or Windows App SDK to install.
+- **Starts with Windows** if you want it to, hidden in the tray.
+- **Installer or portable.** A per-user MSI that needs no administrator rights, or a ZIP to run from any folder. Neither needs .NET or the Windows App SDK installed.
 
 ## Requirements
 
@@ -33,7 +34,7 @@ Changing a Sonar preset and output device together usually means opening GG and 
 
 ## Quick start
 
-1. Download `SonarHotkeys-win-x64.zip` from the [latest release](https://github.com/Ronnybest/SonarHotkeys/releases/latest), extract the `SonarHotkeys` folder anywhere and run `SonarHotkeys.exe` from it.
+1. From the [latest release](https://github.com/Ronnybest/SonarHotkeys/releases/latest), download and run `SonarHotkeys-win-x64.msi`. It installs for your account only, adds SonarHotkeys to the Start menu and starts it when you finish. For a portable copy, download `SonarHotkeys-win-x64.zip` instead, extract the `SonarHotkeys` folder anywhere and run `SonarHotkeys.exe` from it.
 2. In GG, mark the **Game** presets you want to use as favorites.
 3. In SonarHotkeys, click **Refresh from Sonar**, then **Add** a binding for each preset.
 4. Choose an output device, or keep **Keep current device** to switch only the preset.
@@ -60,11 +61,13 @@ Closing the window hides it to the tray. Click the tray icon or choose **Setting
 | --- | --- |
 | `--tray` | Start hidden in the tray. Ignored until at least one binding is saved, and in Debug builds. |
 
-To start with Windows, put a shortcut to `SonarHotkeys.exe --tray` into `shell:startup`.
+Turn on **Start with Windows** in the window or the tray menu to start SonarHotkeys hidden in the tray when you sign in. It adds a shortcut to your Startup folder, which also appears on the Startup apps page of Task Manager. The portable copy updates the shortcut when you move its folder, and uninstalling the MSI removes it.
 
 ## Settings
 
-Settings are stored per user in `%LOCALAPPDATA%\SonarHotkeys\settings.json`. To update, exit from the tray and replace the `SonarHotkeys` folder with the new one; your bindings are kept, including those saved by version 1.x. Preset and device IDs are specific to each computer, so set them up again on a new machine.
+Settings are stored per user in `%LOCALAPPDATA%\SonarHotkeys\settings.json`, separately from the app, so updating or uninstalling keeps your bindings, including those saved by version 1.x. Preset and device IDs are specific to each computer, so set them up again on a new machine.
+
+To update the installed app, run the new MSI: it closes the running app, replaces it and starts it again. To update the portable copy, exit from the tray and replace the `SonarHotkeys` folder.
 
 A damaged settings file is never overwritten automatically: the app starts with an empty configuration and shows the error. To reset, exit the app and delete the file.
 
@@ -77,6 +80,7 @@ A damaged settings file is never overwritten automatically: the app starts with 
 | An output device is missing | Connect it, refresh and choose it again |
 | "The shortcut is in use" | Another application or Windows owns it; choose a different combination |
 | No notifications | Check Windows notification settings and Do Not Disturb |
+| "Windows protected your PC" when starting the MSI or EXE | The files are not code-signed yet. Choose **More info**, then **Run anyway** |
 
 ## Building from source
 
@@ -88,12 +92,13 @@ dotnet run --project tests/SonarHotkeys.Checks/SonarHotkeys.Checks.csproj -c Rel
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Publish.ps1
 ```
 
-The checks use temporary settings files and never touch your real settings or Sonar routing. `Publish.ps1` produces `artifacts/SonarHotkeys-win-x64.zip` with the application folder, documentation and licenses only.
+The checks use temporary settings files and a scratch Startup folder, and never touch your real settings, startup entries or Sonar routing. `Publish.ps1` produces `artifacts/SonarHotkeys-win-x64.zip` and `artifacts/SonarHotkeys-win-x64.msi`, both with the application folder, documentation and licenses only. The installer is built with [WiX Toolset](https://wixtoolset.org) 5, restored from NuGet during the build.
 
 | Project | Contents |
 | --- | --- |
 | `SonarHotkeys.Core` | Settings, shortcut parsing, translations and Sonar switching, independent of the UI |
 | `SonarHotkeys.WinUI` | The WinUI 3 app: settings window, tray icon and global hotkeys |
+| `installer` | The per-user MSI: Start menu shortcut, upgrades and removal of the autostart shortcut |
 | `tests/SonarHotkeys.Checks` | Checks for the core library and the translation files |
 
 Debug builds always show the window and accept `--settings=<file>` to use a separate settings file and `--skip-refresh` to keep the cached presets without contacting Sonar.

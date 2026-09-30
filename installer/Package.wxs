@@ -1,0 +1,53 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <!-- Per-user install into %LOCALAPPDATA%\Programs\SonarHotkeys: perUserOrMachine with MSIINSTALLPERUSER=1
+       (both set by WiX for this scope) redirects ProgramFiles64Folder there and needs no administrator rights.
+       The UpgradeCode never changes: it lets every new version replace the installed one. -->
+  <Package Name="SonarHotkeys" Manufacturer="Danil" Version="$(ProductVersion)"
+           UpgradeCode="1F9112C0-EC56-405F-A1BA-788764B40E80" Scope="perUserOrMachine" Compressed="yes">
+    <!-- The new version installs before the old one is removed, so components they share, such as the one that
+         removes the autostart shortcut on uninstall, are never removed during an upgrade. -->
+    <MajorUpgrade Schedule="afterInstallExecute" DowngradeErrorMessage="A newer version of SonarHotkeys is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="AppIcon" SourceFile="..\SonarHotkeys.WinUI\Assets\app.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Ronnybest/SonarHotkeys" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="SonarHotkeys">
+        <!-- The whole published folder: executable, Windows App SDK files, documentation and licenses. -->
+        <Files Include="!(bindpath.App)**" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="StartupFolder" />
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut">
+        <Shortcut Id="AppShortcut" Name="SonarHotkeys" Target="[INSTALLFOLDER]SonarHotkeys.exe"
+                  WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <!-- The app creates this shortcut when "Start with Windows" is on; uninstalling removes it, so no startup
+             entry is left pointing at deleted files. -->
+        <RemoveFile Id="RemoveAutostartShortcut" Directory="StartupFolder" Name="SonarHotkeys.lnk" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\SonarHotkeys" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <!-- Minimal wizard: license, install, and an option to start the app at the end.
+         The license page carries the Windows App SDK terms that end users have to accept. -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(LicenseRtf)" />
+    <ui:WixUI Id="WixUI_Minimal" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch SonarHotkeys" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <!-- WixShellExec formats this value itself, so the folder reference is resolved at launch time. -->
+    <Property Id="WixShellExecTarget" Value="[INSTALLFOLDER]SonarHotkeys.exe" />
+    <CustomAction Id="LaunchApplication" BinaryRef="Wix4UtilCA_X64" DllEntry="WixShellExec" Impersonate="yes" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+  </Package>
+
+</Wix>

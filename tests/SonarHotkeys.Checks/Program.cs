@@ -115,6 +115,17 @@ try
     Check(ValidationError("", Row("a", ""), Row("a", "Ctrl + F1")) == "Each preset can be added only once.", "a repeated preset is rejected");
     Check(ValidationError("", Row("a", "Ctrl+Alt+1"), Row("b", "Alt + Ctrl + D1")) == "Shortcuts must be unique.", "the same shortcut in another spelling is rejected");
     Check(ValidationError("Ctrl + Alt + 1", Row("a", "Ctrl + Alt + D1")) == "The cycling shortcut is already assigned to a preset.", "the cycle shortcut cannot reuse a preset shortcut");
+    // Autostart against a scratch folder, never the real Startup folder.
+    var autostart = new Autostart(Path.Combine(directory, "Startup"));
+    Check(!autostart.IsEnabled, "autostart is off until enabled");
+    autostart.Enable(@"C:\Apps\SonarHotkeys\SonarHotkeys.exe");
+    Check(autostart.IsEnabled && autostart.Read() == (@"C:\Apps\SonarHotkeys\SonarHotkeys.exe", "--tray"),
+        "the Startup shortcut starts the app hidden in the tray");
+    Check(autostart.Refresh(@"D:\Moved\SonarHotkeys.exe") && autostart.Read().Target == @"D:\Moved\SonarHotkeys.exe"
+        && !autostart.Refresh(@"D:\Moved\SonarHotkeys.exe"), "a moved app updates its shortcut once");
+    autostart.Disable();
+    autostart.Disable();
+    Check(!autostart.IsEnabled && !autostart.Refresh(@"D:\Moved\SonarHotkeys.exe"), "disabling removes the shortcut and refresh does not recreate it");
     Check(new SonarService(() => "en").ErrorText(new SonarNotRunningException()) == "Sonar is unavailable. Enable Sonar in SteelSeries GG.",
         "Sonar errors use the selected language");
     Console.WriteLine($"PASS: {checks} checks. No real user settings or audio routes were modified.");

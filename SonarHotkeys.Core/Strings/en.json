@@ -25,6 +25,8 @@
   "Tray.Favorites": "Favorite presets",
   "Tray.Next": "Next preset",
   "Tray.Exit": "Exit",
+  "Autostart.Label": "Start with Windows",
+  "Autostart.Failed": "Could not change starting with Windows. {0}",
   "Notification.ErrorTitle": "SonarHotkeys — error",
   "Notification.SwitchedTitle": "Sonar — preset selected",
 
