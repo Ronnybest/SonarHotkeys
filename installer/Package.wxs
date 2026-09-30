@@ -7,8 +7,12 @@
   <Package Name="SonarHotkeys" Manufacturer="Danil" Version="$(ProductVersion)"
            UpgradeCode="1F9112C0-EC56-405F-A1BA-788764B40E80" Scope="perUserOrMachine" Compressed="yes">
     <!-- The new version installs before the old one is removed, so components they share, such as the one that
-         removes the autostart shortcut on uninstall, are never removed during an upgrade. -->
-    <MajorUpgrade Schedule="afterInstallExecute" DowngradeErrorMessage="A newer version of SonarHotkeys is already installed." />
+         removes the autostart shortcut on uninstall, are never removed during an upgrade.
+         Same-version upgrades too: otherwise a rebuild with an unchanged version installs a second copy beside the first. -->
+    <MajorUpgrade Schedule="afterInstallExecute" AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of SonarHotkeys is already installed." />
+    <!-- "e": replace files of an equal version too, so a same-version upgrade really installs the new build. -->
+    <Property Id="REINSTALLMODE" Value="emus" />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
     <Icon Id="AppIcon" SourceFile="..\SonarHotkeys.WinUI\Assets\app.ico" />

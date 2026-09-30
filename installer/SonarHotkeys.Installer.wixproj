@@ -10,7 +10,8 @@
     <SuppressSpecificWarnings>1077</SuppressSpecificWarnings>
     <!-- ICE03: some Windows App SDK DLLs declare several languages in their version resource, which does not fit the
          File table's Language column. It only matters when two copies of a file share a version, which never happens here. -->
-    <SuppressIces>ICE03</SuppressIces>
+    <!-- ICE61, ICE40: same-version upgrades and REINSTALLMODE are intended (see Package.wxs). -->
+    <SuppressIces>ICE03;ICE40;ICE61</SuppressIces>
     <DefineConstants>ProductVersion=$(ProductVersion);LicenseRtf=$(LicenseRtf)</DefineConstants>
   </PropertyGroup>
 
