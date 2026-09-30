@@ -41,7 +41,7 @@ public sealed class SonarService(Func<string> language)
         var available = (await sonar.Configs.GetAllAsync(Channel.Game, ct)).Where(c => c.IsFavorite).ToDictionary(c => c.Id);
         var favorites = bindings.Select(b => b.PresetId).Distinct()
             .Where(available.ContainsKey).Select(id => available[id]).ToList();
-        if (favorites.Count == 0) throw new InvalidOperationException(T("Нет доступных избранных пресетов из настроек. Добавьте пресеты в избранное GG и в таблицу."));
+        if (favorites.Count == 0) throw new InvalidOperationException(T("Switch.NoConfiguredFavorites"));
         var current = await sonar.Configs.GetSelectedAsync(Channel.Game, ct);
         var next = favorites[(favorites.FindIndex(c => c.Id == current?.Id) + 1) % favorites.Count];
         var binding = bindings.FirstOrDefault(b => b.PresetId == next.Id)
@@ -53,7 +53,7 @@ public sealed class SonarService(Func<string> language)
     {
         var configs = await sonar.Configs.GetAllAsync(Channel.Game, ct);
         var target = configs.FirstOrDefault(c => c.Id == binding.PresetId)
-            ?? throw new InvalidOperationException(T("Пресет отсутствует в Sonar Game. Обновите список и выберите его заново."));
+            ?? throw new InvalidOperationException(T("Switch.PresetMissing"));
         var undo = new Stack<Func<CancellationToken, Task>>();
         var previous = await sonar.Configs.GetSelectedAsync(Channel.Game, ct);
         string deviceName = "";
@@ -63,7 +63,7 @@ public sealed class SonarService(Func<string> language)
             {
                 var devices = await sonar.Devices.GetAllAsync(AudioDataFlow.Render, false, ct);
                 var device = devices.FirstOrDefault(d => d.Id == binding.DeviceId)
-                    ?? throw new InvalidOperationException(T("Устройство вывода недоступно. Подключите его или выберите другое в настройках."));
+                    ?? throw new InvalidOperationException(T("Switch.DeviceMissing"));
                 deviceName = device.Name;
                 var mode = await sonar.Mode.GetAsync(ct);
                 if (mode == Mode.Classic)
@@ -72,28 +72,28 @@ public sealed class SonarService(Func<string> language)
                     foreach (Channel channel in ClassicChannels)
                     {
                         var old = routes.FirstOrDefault(r => r.Channel == channel)
-                            ?? throw new InvalidOperationException(T("Sonar не вернул устройство канала {0}.", channel));
+                            ?? throw new InvalidOperationException(T("Switch.ChannelDeviceMissing", channel));
                         undo.Push(token => sonar.Redirections.SetClassicDeviceAsync(channel, old.DeviceId, token));
                         await sonar.Redirections.SetClassicDeviceAsync(channel, device.Id, ct);
                     }
                     var confirmed = await sonar.Redirections.GetClassicRedirectionsAsync(ct);
                     if (ClassicChannels.Any(c => !confirmed.Any(r => r.Channel == c && r.DeviceId == device.Id)))
-                        throw new InvalidOperationException(T("Sonar не подтвердил смену устройства вывода."));
+                        throw new InvalidOperationException(T("Switch.DeviceNotConfirmed"));
                 }
                 else
                 {
                     var old = (await sonar.Redirections.GetStreamRedirectionsAsync(ct)).Personal
-                        ?? throw new InvalidOperationException(T("Sonar не вернул устройство Personal."));
+                        ?? throw new InvalidOperationException(T("Switch.PersonalMissing"));
                     undo.Push(token => sonar.Redirections.SetMixDeviceAsync(Mix.Personal, old.DeviceId, token));
                     await sonar.Redirections.SetMixDeviceAsync(Mix.Personal, device.Id, ct);
                     if ((await sonar.Redirections.GetStreamRedirectionsAsync(ct)).Personal?.DeviceId != device.Id)
-                        throw new InvalidOperationException(T("Sonar не подтвердил смену устройства Personal."));
+                        throw new InvalidOperationException(T("Switch.PersonalNotConfirmed"));
                 }
             }
             if (previous != null) undo.Push(token => sonar.Configs.SelectAsync(previous.Id, token));
             await sonar.Configs.SelectAsync(target.Id, ct);
             if ((await sonar.Configs.GetSelectedAsync(Channel.Game, ct))?.Id != target.Id)
-                throw new InvalidOperationException(T("Sonar не подтвердил выбор пресета."));
+                throw new InvalidOperationException(T("Switch.PresetNotConfirmed"));
         }
         catch (Exception ex)
         {
@@ -102,20 +102,19 @@ public sealed class SonarService(Func<string> language)
             using var rollback = new CancellationTokenSource(TimeSpan.FromSeconds(8));
             while (undo.TryPop(out var restore))
                 try { await restore(rollback.Token); } catch { restored = false; }
-            throw new InvalidOperationException(ErrorText(ex) + (restored
-                ? T(" Предыдущие настройки восстановлены.") : T(" Восстановить все настройки не удалось; проверьте выход и пресет в GG.")), ex);
+            throw new InvalidOperationException(T(restored ? "Switch.Restored" : "Switch.RestoreFailed", ErrorText(ex)), ex);
         }
         return new(target.Id, target.Name, deviceName);
     }
 
     public string ErrorText(Exception ex) => ex switch
     {
-        SteelSeriesNotFoundException => T("SteelSeries GG не найден или не запущен. Запустите GG."),
-        SonarNotRunningException => T("Sonar недоступен. Включите Sonar в SteelSeries GG."),
-        DiscoveryException => T("Не удалось обнаружить GG/Sonar. Проверьте, что GG запущен и Sonar включён. ") + ex.Message,
-        SonarWrongModeException => T("Операция недоступна в текущем режиме Sonar. ") + ex.Message,
-        OperationCanceledException => T("Sonar не ответил вовремя. Проверьте GG и повторите попытку."),
-        HttpRequestException => T("Нет соединения с Sonar. Проверьте, что GG запущен. ") + ex.Message,
+        SteelSeriesNotFoundException => T("Error.GgNotFound"),
+        SonarNotRunningException => T("Error.SonarNotRunning"),
+        DiscoveryException => T("Error.Discovery", ex.Message),
+        SonarWrongModeException => T("Error.WrongMode", ex.Message),
+        OperationCanceledException => T("Error.Timeout"),
+        HttpRequestException => T("Error.Connection", ex.Message),
         _ => ex.Message
     };
 }

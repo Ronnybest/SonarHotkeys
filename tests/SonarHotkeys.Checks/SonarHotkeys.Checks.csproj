@@ -7,6 +7,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../SonarHotkeys/SonarHotkeys.csproj" />
+    <ProjectReference Include="../../SonarHotkeys.Core/SonarHotkeys.Core.csproj" />
   </ItemGroup>
 </Project>

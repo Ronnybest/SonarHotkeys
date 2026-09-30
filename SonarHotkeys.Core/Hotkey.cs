@@ -20,12 +20,12 @@ public readonly record struct Hotkey(uint Modifiers, uint Key)
                 default:
                     var token = part.Length == 1 && char.IsDigit(part[0]) ? "D" + part : part;
                     if (key != 0 || !KeysByName.TryGetValue(token, out key))
-                        throw new ArgumentException(TextCatalog.Get("Некорректное сочетание: {0}", language, text));
+                        throw new ArgumentException(TextCatalog.Get("Shortcut.Invalid", language, text));
                     break;
             }
         }
         if (key == 0 || modifiers == 0)
-            throw new ArgumentException(TextCatalog.Get("Укажите Ctrl, Alt, Shift или Win и клавишу: {0}", language, text));
+            throw new ArgumentException(TextCatalog.Get("Shortcut.NeedsModifier", language, text));
         return new(modifiers, key);
     }
 

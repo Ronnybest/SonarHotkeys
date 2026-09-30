@@ -9,7 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Translations.json" LogicalName="SonarHotkeys.Translations.json" />
+    <!-- One file per language, found at run time as SonarHotkeys.Strings.<code>.json. -->
+    <EmbeddedResource Include="Strings\*.json" LogicalName="SonarHotkeys.Strings.%(Filename).json" />
     <PackageReference Include="Steelseries-NET-API" Version="2.0.0" />
   </ItemGroup>
 

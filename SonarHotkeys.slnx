@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="SonarHotkeys.Core/SonarHotkeys.Core.csproj" />
-  <Project Path="SonarHotkeys/SonarHotkeys.csproj" />
+  <Project Path="SonarHotkeys.WinUI/SonarHotkeys.WinUI.csproj">
+    <Platform Solution="*|Any CPU" Project="x64" />
+  </Project>
   <Folder Name="/tests/">
     <Project Path="tests/SonarHotkeys.Checks/SonarHotkeys.Checks.csproj" />
   </Folder>
