@@ -15,12 +15,13 @@ void Check(bool condition, string name)
 void SelectLanguage(ComboBox picker, string language) =>
     picker.SelectedItem = picker.Items.Cast<Choice>().First(c => c.Id == language);
 
-static string SourceDirectory([CallerFilePath] string path = "") =>
-    Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, "..", "..", "SonarHotkeys"));
+static string SourceDirectory(string project, [CallerFilePath] string path = "") =>
+    Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, "..", "..", project));
 
 // Russian source text is the catalog key: a typo in either place would silently drop the English text.
-string sources = string.Concat(Directory.GetFiles(SourceDirectory(), "*.cs").Select(File.ReadAllText));
-var catalog = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(Path.Combine(SourceDirectory(), "Translations.json")))!;
+string sources = string.Concat(new[] { "SonarHotkeys", "SonarHotkeys.Core" }
+    .SelectMany(project => Directory.GetFiles(SourceDirectory(project), "*.cs")).Select(File.ReadAllText));
+var catalog = JsonSerializer.Deserialize<Dictionary<string, string>>(File.ReadAllText(Path.Combine(SourceDirectory("SonarHotkeys.Core"), "Translations.json")))!;
 var keys = Regex.Matches(sources, @"\b(?:T|TextCatalog\.Get|Localized|AddButton)\((?:(?:[^""()]|\([^""()]*\))*,\s*)?((?:""(?:[^""\\]|\\.)*""\s*\+?\s*)+)")
     .Select(m => string.Concat(Regex.Matches(m.Groups[1].Value, @"""((?:[^""\\]|\\.)*)""").Select(s => Regex.Unescape(s.Groups[1].Value))))
     .ToHashSet();
@@ -69,17 +70,28 @@ try
         Check(rejected && File.ReadAllText(path) == invalid, "corrupt settings are rejected without overwriting");
     }
 
-    var type = typeof(AppSettings).Assembly.GetType("SonarHotkeys.Hotkey")!;
-    var parse = type.GetMethod("Parse")!;
-    object? Parse(string value) => parse.Invoke(null, [value, "en"]);
+    Hotkey? Parse(string value) => Hotkey.Parse(value, "en");
     Check(Parse("") == null, "unassigned shortcut");
-    Check(Equals(Parse("Ctrl+Alt+1"), Parse("Alt + Ctrl + D1")), "shortcut alias and order");
+    Check(Parse("Ctrl+Alt+1") == Parse("Alt + Ctrl + D1"), "shortcut alias and order");
+    Check(Parse("Ctrl + Alt + F12") == new Hotkey(Hotkey.Control | Hotkey.Alt, (uint)Keys.F12), "modifier flags and virtual key");
     foreach (string invalid in new[] { "Ctrl", "A", "Ctrl + Unknown", "Ctrl + A + B", "Ctrl + ControlKey", "Ctrl + None" })
     {
         bool rejected = false;
-        try { Parse(invalid); } catch (TargetInvocationException ex) when (ex.InnerException is ArgumentException) { rejected = true; }
+        try { Parse(invalid); } catch (ArgumentException) { rejected = true; }
         Check(rejected, "invalid shortcut: " + invalid);
     }
+    // Shortcuts saved by the WinForms version use Keys names: every non-modifier key must round-trip.
+    var modifierKeys = new[] { Keys.None, Keys.ControlKey, Keys.Menu, Keys.ShiftKey, Keys.LWin, Keys.RWin };
+    var legacyKeys = Enum.GetValues<Keys>().Where(k => (int)k is > 0 and <= 255 && !modifierKeys.Contains(k)).Distinct().ToList();
+    Check(legacyKeys.All(k => Parse("Ctrl + " + k)?.Key == (uint)k) &&
+        Enum.GetNames<Keys>().Where(n => legacyKeys.Contains(Enum.Parse<Keys>(n))).All(n => Parse("Alt + " + n)?.Key == (uint)Enum.Parse<Keys>(n)),
+        "every WinForms key name parses to its virtual key");
+    Check(legacyKeys.All(k => Hotkey.Format(true, false, true, (uint)k) == "Ctrl + Shift + " + k),
+        "captured keys are written with WinForms names");
+    Check(Hotkey.Format(true, true, false, (uint)Keys.ControlKey) == null && Hotkey.Format(false, false, false, (uint)Keys.A) == null,
+        "modifier-only or unmodified presses are not captured");
+    Check(new SonarService(() => "en").ErrorText(new SonarNotRunningException()) == "Sonar is unavailable. Enable Sonar in SteelSeries GG.",
+        "Sonar errors use the selected language");
     Exception? uiFailure = null;
     var uiThread = new Thread(() =>
     {
@@ -109,8 +121,6 @@ try
             Check(AppSettings.Load(uiPath).Language == "en" && AppSettings.Load(uiPath).Bindings.Count == 0,
                 "changing language saves preference without committing draft bindings");
             Check(grid.Rows[0].Cells["Preset"].Value as string == "user-selected-id", "language switch preserves draft row");
-            var error = (string)typeof(Form1).GetMethod("ErrorText", flags)!.Invoke(form, [new SonarNotRunningException()])!;
-            Check(error == "Sonar is unavailable. Enable Sonar in SteelSeries GG.", "Sonar errors use selected English language");
             typeof(Form1).GetMethod("SaveSettings", flags)!.Invoke(form, null);
             Check(AppSettings.Load(uiPath).Bindings.Single().PresetId == "user-selected-id", "window saves first-run setup");
             using var reopened = new Form1(uiPath);

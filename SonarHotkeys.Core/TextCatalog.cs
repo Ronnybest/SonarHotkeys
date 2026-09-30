@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace SonarHotkeys;
 
-internal static class TextCatalog
+public static class TextCatalog
 {
     private static readonly Dictionary<string, string> English = Load();
 
@@ -14,7 +14,7 @@ internal static class TextCatalog
     {
         using var stream = typeof(TextCatalog).Assembly.GetManifestResourceStream("SonarHotkeys.Translations.json")
             ?? throw new InvalidOperationException("Translation resources are missing.");
-        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream)!;
+        return JsonSerializer.Deserialize(stream, CoreJson.Default.DictionaryStringString)!;
     }
 
     public static string Get(string key, string? language = null, params object[] arguments)

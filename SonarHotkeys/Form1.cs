@@ -1,8 +1,5 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
-using SteelSeriesAPI.Core;
-using SteelSeriesAPI.Sonar;
-using SteelSeriesAPI.Sonar.Enums;
 
 namespace SonarHotkeys;
 
@@ -21,6 +18,7 @@ public partial class Form1 : Form
     private readonly List<int> _registered = [];
     private readonly CancellationTokenSource _lifetime = new();
     private readonly string _settingsPath;
+    private readonly SonarService _sonar;
     private AppSettings _settings;
     private BindingList<PresetBinding> _rows = [];
     private List<Choice> _favorites = [];
@@ -47,6 +45,7 @@ public partial class Form1 : Form
             _settings = AppSettings.Defaults();
             _startupError = T("Не удалось прочитать настройки. Создайте привязки заново и сохраните их. ") + ex.Message;
         }
+        _sonar = new(() => _settings.Language);
         InitializeComponent();
         Localized(this, "SonarHotkeys — настройки");
         ClientSize = new Size(1020, 570);
@@ -96,8 +95,8 @@ public partial class Form1 : Form
             {
                 ClearHotkeys();
                 box.ReadOnly = true;
-                box.KeyDown -= Hotkey.Capture;
-                box.KeyDown += Hotkey.Capture;
+                box.KeyDown -= HotkeyCapture.Capture;
+                box.KeyDown += HotkeyCapture.Capture;
             }
         };
         _grid.CellEndEdit += (_, _) => { if (!_closing) RegisterSettings(); };
@@ -105,7 +104,7 @@ public partial class Form1 : Form
         layout.Controls.Add(_grid, 0, 2);
         var cyclePanel = new FlowLayoutPanel { Dock = DockStyle.Fill };
         cyclePanel.Controls.Add(Localized(new Label { AutoSize = true, Padding = new Padding(0, 8, 0, 0) }, "Перебор настроенных пресетов:"));
-        _cycle.KeyDown += Hotkey.Capture;
+        _cycle.KeyDown += HotkeyCapture.Capture;
         _cycle.Enter += (_, _) => ClearHotkeys();
         _cycle.Leave += (_, _) => { if (!_closing) RegisterSettings(); };
         cyclePanel.Controls.Add(_cycle);
@@ -188,7 +187,7 @@ public partial class Form1 : Form
     private void AddButton(string key, Func<Task> action)
     {
         var button = Localized(new Button { AutoSize = true }, key);
-        button.Click += async (_, _) => { try { await action(); } catch (Exception ex) { Report(ErrorText(ex), true); } };
+        button.Click += async (_, _) => { try { await action(); } catch (Exception ex) { Report(_sonar.ErrorText(ex), true); } };
         _toolbar.Controls.Add(button);
     }
 
@@ -241,13 +240,11 @@ public partial class Form1 : Form
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
             timeout.CancelAfter(TimeSpan.FromSeconds(15));
-            using var sonar = new SonarClient();
-            var configs = await sonar.Configs.GetAllAsync(Channel.Game, timeout.Token);
-            var devices = await sonar.Devices.GetAllAsync(AudioDataFlow.Render, false, timeout.Token);
+            var inventory = await _sonar.DiscoverAsync(timeout.Token);
             if (_closing) return;
             _grid.EndEdit();
-            _favorites = configs.Where(c => c.IsFavorite).Select(c => new Choice(c.Id, c.Name)).OrderBy(c => c.Name).ToList();
-            _devices = devices.Select(d => new Choice(d.Id, d.Name)).OrderBy(d => d.Name).ToList();
+            _favorites = inventory.Favorites;
+            _devices = inventory.Devices;
             UpdateChoices();
             // Refresh the cache without saving uncommitted edits in the table.
             _settings.Favorites = _favorites.ToList();
@@ -260,7 +257,7 @@ public partial class Form1 : Form
                     ? T("Найдено пресетов: {0}, устройств: {1}. Нажмите «Добавить», выберите устройство и сочетание, затем «Сохранить». Для перебора задайте отдельное сочетание ниже таблицы.", _favorites.Count, _devices.Count)
                     : T("Избранных пресетов: {0}. Устройств: {1}. Изменения сочетаний и устройств применяются кнопкой «Сохранить».", _favorites.Count, _devices.Count));
         }
-        catch (Exception ex) { if (!_closing) Report(ErrorText(ex), true); }
+        catch (Exception ex) { if (!_closing) Report(_sonar.ErrorText(ex), true); }
         finally { SetBusy(false); }
     }
 
@@ -317,7 +314,7 @@ public partial class Form1 : Form
             try
             {
                 if (Hotkey.Parse(text, _settings.Language) is not { } key) return;
-                if (!RegisterHotKey(Handle, id, key.Modifiers | 0x4000, (uint)key.Key))
+                if (!RegisterHotKey(Handle, id, key.Modifiers | 0x4000, key.Key))
                     throw new InvalidOperationException(T("Не удалось назначить {0}: сочетание занято или запрещено Windows (код {1}).", text, Marshal.GetLastWin32Error()));
                 _registered.Add(id);
                 if (binding != null) _hotkeys[id] = binding;
@@ -359,103 +356,25 @@ public partial class Form1 : Form
         base.WndProc(ref m);
     }
 
-    private async Task CycleAsync()
+    private Task CycleAsync() => RunSonarAsync(ct => _sonar.CycleAsync(_settings.Bindings, ct));
+
+    private Task ApplyAsync(PresetBinding binding) => RunSonarAsync(ct => _sonar.ApplyAsync(binding, ct));
+
+    private async Task RunSonarAsync(Func<CancellationToken, Task<SwitchResult>> action)
     {
         if (_busy || _closing) return;
-        // Read the actual selection, including changes made directly in GG.
-        await RunSonarAsync(async (sonar, ct) =>
-        {
-            var available = (await sonar.Configs.GetAllAsync(Channel.Game, ct)).Where(c => c.IsFavorite).ToDictionary(c => c.Id);
-            var favorites = _settings.Bindings.Select(b => b.PresetId).Distinct()
-                .Where(available.ContainsKey).Select(id => available[id]).ToList();
-            if (favorites.Count == 0) throw new InvalidOperationException(T("Нет доступных избранных пресетов из настроек. Добавьте пресеты в избранное GG и в таблицу."));
-            var current = await sonar.Configs.GetSelectedAsync(Channel.Game, ct);
-            var next = favorites[(favorites.FindIndex(c => c.Id == current?.Id) + 1) % favorites.Count];
-            var binding = _settings.Bindings.FirstOrDefault(b => b.PresetId == next.Id)
-                ?? new PresetBinding { PresetId = next.Id };
-            await ApplyCoreAsync(sonar, binding, ct);
-        });
-    }
-
-    private async Task ApplyAsync(PresetBinding binding)
-    {
-        if (_busy || _closing) return;
-        await RunSonarAsync((sonar, ct) => ApplyCoreAsync(sonar, binding, ct));
-    }
-
-    private async Task RunSonarAsync(Func<SonarClient, CancellationToken, Task> action)
-    {
         SetBusy(true);
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
             timeout.CancelAfter(TimeSpan.FromSeconds(20));
-            using var sonar = new SonarClient();
-            await action(sonar, timeout.Token);
+            var result = await action(timeout.Token);
+            _selectedId = result.PresetId;
+            RebuildMenu();
+            Report(result.Summary, notify: true);
         }
-        catch (Exception ex) { if (!_closing) Report(ErrorText(ex), true); }
+        catch (Exception ex) { if (!_closing) Report(_sonar.ErrorText(ex), true); }
         finally { SetBusy(false); }
-    }
-
-    private async Task ApplyCoreAsync(SonarClient sonar, PresetBinding binding, CancellationToken ct)
-    {
-        var configs = await sonar.Configs.GetAllAsync(Channel.Game, ct);
-        var target = configs.FirstOrDefault(c => c.Id == binding.PresetId)
-            ?? throw new InvalidOperationException(T("Пресет отсутствует в Sonar Game. Обновите список и выберите его заново."));
-        var undo = new Stack<Func<CancellationToken, Task>>();
-        var previous = await sonar.Configs.GetSelectedAsync(Channel.Game, ct);
-        string deviceName = "";
-        try
-        {
-            if (!string.IsNullOrEmpty(binding.DeviceId))
-            {
-                var devices = await sonar.Devices.GetAllAsync(AudioDataFlow.Render, false, ct);
-                var device = devices.FirstOrDefault(d => d.Id == binding.DeviceId)
-                    ?? throw new InvalidOperationException(T("Устройство вывода недоступно. Подключите его или выберите другое в настройках."));
-                deviceName = device.Name;
-                var mode = await sonar.Mode.GetAsync(ct);
-                if (mode == Mode.Classic)
-                {
-                    var routes = await sonar.Redirections.GetClassicRedirectionsAsync(ct);
-                    foreach (Channel channel in new[] { Channel.Game, Channel.Chat, Channel.Media, Channel.Aux })
-                    {
-                        var old = routes.FirstOrDefault(r => r.Channel == channel)
-                            ?? throw new InvalidOperationException(T("Sonar не вернул устройство канала {0}.", channel));
-                        undo.Push(token => sonar.Redirections.SetClassicDeviceAsync(channel, old.DeviceId, token));
-                        await sonar.Redirections.SetClassicDeviceAsync(channel, device.Id, ct);
-                    }
-                    var confirmed = await sonar.Redirections.GetClassicRedirectionsAsync(ct);
-                    if (new[] { Channel.Game, Channel.Chat, Channel.Media, Channel.Aux }.Any(c => !confirmed.Any(r => r.Channel == c && r.DeviceId == device.Id)))
-                        throw new InvalidOperationException(T("Sonar не подтвердил смену устройства вывода."));
-                }
-                else
-                {
-                    var old = (await sonar.Redirections.GetStreamRedirectionsAsync(ct)).Personal
-                        ?? throw new InvalidOperationException(T("Sonar не вернул устройство Personal."));
-                    undo.Push(token => sonar.Redirections.SetMixDeviceAsync(Mix.Personal, old.DeviceId, token));
-                    await sonar.Redirections.SetMixDeviceAsync(Mix.Personal, device.Id, ct);
-                    if ((await sonar.Redirections.GetStreamRedirectionsAsync(ct)).Personal?.DeviceId != device.Id)
-                        throw new InvalidOperationException(T("Sonar не подтвердил смену устройства Personal."));
-                }
-            }
-            if (previous != null) undo.Push(token => sonar.Configs.SelectAsync(previous.Id, token));
-            await sonar.Configs.SelectAsync(target.Id, ct);
-            if ((await sonar.Configs.GetSelectedAsync(Channel.Game, ct))?.Id != target.Id)
-                throw new InvalidOperationException(T("Sonar не подтвердил выбор пресета."));
-        }
-        catch (Exception ex)
-        {
-            if (undo.Count == 0) throw;
-            bool restored = true;
-            using var rollback = new CancellationTokenSource(TimeSpan.FromSeconds(8));
-            while (undo.TryPop(out var restore))
-                try { await restore(rollback.Token); } catch { restored = false; }
-            throw new InvalidOperationException(ErrorText(ex) + (restored
-                ? T(" Предыдущие настройки восстановлены.") : T(" Восстановить все настройки не удалось; проверьте выход и пресет в GG.")), ex);
-        }
-        _selectedId = target.Id;
-        RebuildMenu();
-        Report(target.Name + (deviceName.Length == 0 ? "" : " → " + deviceName), notify: true);
     }
 
     private void RebuildMenu()
@@ -487,17 +406,6 @@ public partial class Form1 : Form
         _languagePicker.Enabled = !busy;
         RebuildMenu();
     }
-
-    private string ErrorText(Exception ex) => ex switch
-    {
-        SteelSeriesNotFoundException => T("SteelSeries GG не найден или не запущен. Запустите GG."),
-        SonarNotRunningException => T("Sonar недоступен. Включите Sonar в SteelSeries GG."),
-        DiscoveryException => T("Не удалось обнаружить GG/Sonar. Проверьте, что GG запущен и Sonar включён. ") + ex.Message,
-        SonarWrongModeException => T("Операция недоступна в текущем режиме Sonar. ") + ex.Message,
-        OperationCanceledException => T("Sonar не ответил вовремя. Проверьте GG и повторите попытку."),
-        HttpRequestException => T("Нет соединения с Sonar. Проверьте, что GG запущен. ") + ex.Message,
-        _ => ex.Message
-    };
 
     private void Report(string message, bool error = false, bool notify = false)
     {

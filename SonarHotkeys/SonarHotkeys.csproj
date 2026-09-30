@@ -10,8 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Translations.json" />
-    <PackageReference Include="Steelseries-NET-API" Version="2.0.0" />
+    <ProjectReference Include="..\SonarHotkeys.Core\SonarHotkeys.Core.csproj" />
   </ItemGroup>
 
 </Project>
