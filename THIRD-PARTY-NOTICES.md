@@ -1,6 +1,18 @@
+# Third-party notices
+
+SonarHotkeys uses Steelseries-NET-API 2.0.0 (DataNext), licensed under MIT:
+https://github.com/DataNext27/SteelSeries-NET-API
+
+The self-contained release also includes Microsoft .NET and Microsoft.Extensions.Logging.Abstractions, distributed under their respective open-source terms:
+https://github.com/dotnet/runtime/blob/main/LICENSE.TXT
+https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT
+https://github.com/dotnet/dotnet/blob/main/LICENSE.TXT
+
+## Steelseries-NET-API license
+
 MIT License
 
-Copyright (c) 2026 Danil
+Copyright (c) DataNext
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +31,4 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+

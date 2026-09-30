@@ -12,6 +12,7 @@ public partial class Form1 : Form
     private readonly DataGridView _grid = new() { Dock = DockStyle.Fill, AutoGenerateColumns = false,
         AllowUserToAddRows = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect, MultiSelect = false };
     private readonly TextBox _cycle = new() { Width = 230, ReadOnly = true };
+    private readonly ComboBox _languagePicker = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 155 };
     private readonly TextBox _output = new() { Dock = DockStyle.Fill, Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical };
     private readonly FlowLayoutPanel _toolbar = new() { Dock = DockStyle.Fill, AutoSize = true };
     private readonly NotifyIcon _tray = new();
@@ -19,6 +20,7 @@ public partial class Form1 : Form
     private readonly Dictionary<int, PresetBinding> _hotkeys = [];
     private readonly List<int> _registered = [];
     private readonly CancellationTokenSource _lifetime = new();
+    private readonly string _settingsPath;
     private AppSettings _settings;
     private BindingList<PresetBinding> _rows = [];
     private List<Choice> _favorites = [];
@@ -34,29 +36,45 @@ public partial class Form1 : Form
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-    public Form1()
+    public Form1() : this(AppSettings.FilePath) { }
+
+    public Form1(string settingsPath)
     {
-        try { _settings = AppSettings.Load(); }
+        _settingsPath = Path.GetFullPath(settingsPath);
+        try { _settings = AppSettings.Load(_settingsPath); }
         catch (Exception ex)
         {
             _settings = AppSettings.Defaults();
-            _startupError = "Не удалось прочитать настройки. Загружены начальные значения. " + ex.Message;
+            _startupError = T("Не удалось прочитать настройки. Создайте привязки заново и сохраните их. ") + ex.Message;
         }
         InitializeComponent();
-        Text = "SonarHotkeys — настройки";
+        Localized(this, "SonarHotkeys — настройки");
         ClientSize = new Size(1020, 570);
         MinimumSize = new Size(850, 450);
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(10), ColumnCount = 1, RowCount = 5 };
-        layout.RowStyles.Add(new(SizeType.Absolute, 52));
+        layout.RowStyles.Add(new(SizeType.Absolute, 90));
         layout.RowStyles.Add(new(SizeType.Absolute, 45));
         layout.RowStyles.Add(new(SizeType.Percent, 100));
         layout.RowStyles.Add(new(SizeType.Absolute, 45));
         layout.RowStyles.Add(new(SizeType.Absolute, 100));
-        layout.Controls.Add(new Label { Dock = DockStyle.Fill, Text =
-            "Выберите избранный пресет Game и устройство вывода. Для назначения сочетания нажмите его в ячейке.\n" +
-            "Устройство: Game, Chat, Media, Aux; в Streamer — Personal. Закрытие окна скрывает его в трей." }, 0, 0);
+        var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
+        header.ColumnStyles.Add(new(SizeType.Percent, 100));
+        header.ColumnStyles.Add(new(SizeType.Absolute, 175));
+        header.Controls.Add(Localized(new Label { Dock = DockStyle.Fill },
+            "1. Включите Sonar в GG и добавьте нужные пресеты Game в избранное. 2. Обновите список и добавьте строки.\n" +
+            "3. Выберите свои пресеты и устройства, нажмите сочетание в ячейке и сохраните настройки.\n" +
+            "Устройство: Game, Chat, Media, Aux; в Streamer — Personal. Закрытие окна скрывает его в трей."), 0, 0);
+        var languagePanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown };
+        languagePanel.Controls.Add(new Label { Text = "Язык / Language", AutoSize = true });
+        // Items instead of DataSource: SelectedItem applies before the control gets a BindingContext.
+        _languagePicker.DisplayMember = "Name";
+        _languagePicker.Items.AddRange([new Choice("ru", "Русский"), new Choice("en", "English")]);
+        _languagePicker.SelectedItem = _languagePicker.Items.Cast<Choice>().First(c => c.Id == _settings.Language);
+        languagePanel.Controls.Add(_languagePicker);
+        header.Controls.Add(languagePanel, 1, 0);
+        layout.Controls.Add(header, 0, 0);
         AddButton("Обновить из Sonar", async () => await RefreshAsync());
-        AddButton("Добавить", () => { _rows.Add(new()); return Task.CompletedTask; });
+        AddButton("Добавить", () => { AddBinding(); return Task.CompletedTask; });
         AddButton("Удалить", () => { if (_grid.CurrentRow?.DataBoundItem is PresetBinding row) _rows.Remove(row); return Task.CompletedTask; });
         AddButton("Сохранить", () => { SaveSettings(); return Task.CompletedTask; });
         AddButton("Применить строку", async () =>
@@ -66,11 +84,11 @@ public partial class Form1 : Form
                 await ApplyAsync(new() { PresetId = row.PresetId, DeviceId = row.DeviceId });
         });
         layout.Controls.Add(_toolbar, 0, 1);
-        _grid.Columns.Add(new DataGridViewComboBoxColumn { Name = "Preset", HeaderText = "Избранный пресет Game", DataPropertyName = "PresetId",
+        _grid.Columns.Add(new DataGridViewComboBoxColumn { Name = "Preset", HeaderText = T("Избранный пресет Game"), Tag = "Избранный пресет Game", DataPropertyName = "PresetId",
             DisplayMember = "Name", ValueMember = "Id", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 40 });
-        _grid.Columns.Add(new DataGridViewComboBoxColumn { Name = "Device", HeaderText = "Устройство вывода", DataPropertyName = "DeviceId",
+        _grid.Columns.Add(new DataGridViewComboBoxColumn { Name = "Device", HeaderText = T("Устройство вывода"), Tag = "Устройство вывода", DataPropertyName = "DeviceId",
             DisplayMember = "Name", ValueMember = "Id", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 35 });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Hotkey", HeaderText = "Сочетание (Delete — очистить)", DataPropertyName = "Hotkey",
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { Name = "Hotkey", HeaderText = T("Сочетание (Delete — очистить)"), Tag = "Сочетание (Delete — очистить)", DataPropertyName = "Hotkey",
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 25 });
         _grid.EditingControlShowing += (_, e) =>
         {
@@ -83,15 +101,15 @@ public partial class Form1 : Form
             }
         };
         _grid.CellEndEdit += (_, _) => { if (!_closing) RegisterSettings(); };
-        _grid.DataError += (_, e) => { e.ThrowException = false; Report("Некорректное значение в таблице. Выберите пресет или устройство из списка.", true); };
+        _grid.DataError += (_, e) => { e.ThrowException = false; Report(T("Некорректное значение в таблице. Выберите пресет или устройство из списка."), true); };
         layout.Controls.Add(_grid, 0, 2);
         var cyclePanel = new FlowLayoutPanel { Dock = DockStyle.Fill };
-        cyclePanel.Controls.Add(new Label { Text = "Перебор настроенных пресетов:", AutoSize = true, Padding = new Padding(0, 8, 0, 0) });
+        cyclePanel.Controls.Add(Localized(new Label { AutoSize = true, Padding = new Padding(0, 8, 0, 0) }, "Перебор настроенных пресетов:"));
         _cycle.KeyDown += Hotkey.Capture;
         _cycle.Enter += (_, _) => ClearHotkeys();
         _cycle.Leave += (_, _) => { if (!_closing) RegisterSettings(); };
         cyclePanel.Controls.Add(_cycle);
-        var next = new Button { Text = "Следующий", AutoSize = true };
+        var next = Localized(new Button { AutoSize = true }, "Следующий");
         next.Click += async (_, _) => await CycleAsync();
         cyclePanel.Controls.Add(next);
         layout.Controls.Add(cyclePanel, 0, 3);
@@ -104,12 +122,72 @@ public partial class Form1 : Form
         _tray.BalloonTipClicked += (_, _) => ShowWindow();
         _tray.Visible = true;
         LoadEditor();
+        _languagePicker.SelectedIndexChanged += (_, _) => ChangeLanguage();
+        RebuildMenu();
+        if (_settings.Bindings.Count == 0) Report(T("Добро пожаловать! Начните с кнопки «Обновить из Sonar», затем добавьте свои пресеты. Горячие клавиши ещё не назначены."));
+    }
+
+    private string T(string key, params object[] arguments) => TextCatalog.Get(key, _settings.Language, arguments);
+
+    // The Tag keeps the catalog key, so the text can be translated again after a language switch.
+    private TControl Localized<TControl>(TControl control, string key) where TControl : Control
+    {
+        control.Tag = key;
+        control.Text = T(key);
+        return control;
+    }
+
+    private void ApplyLanguage()
+    {
+        void Translate(Control control)
+        {
+            if (control.Tag is string key) control.Text = T(key);
+            foreach (Control child in control.Controls) Translate(child);
+        }
+        Translate(this);
+        foreach (DataGridViewColumn column in _grid.Columns)
+            if (column.Tag is string key) column.HeaderText = T(key);
+        UpdateChoices();
         RebuildMenu();
     }
 
-    private void AddButton(string label, Func<Task> action)
+    private void ChangeLanguage()
     {
-        var button = new Button { Text = label, AutoSize = true };
+        if (_languagePicker.SelectedItem is not Choice { Id: var language } || language == _settings.Language) return;
+        _grid.EndEdit();
+        _settings.Language = language;
+        ApplyLanguage();
+        // Save only the existing configuration; keep unfinished table edits in the editor.
+        if (_startupError != null)
+        {
+            Report(T("Язык изменён. Сохраните настройки, чтобы запомнить выбор языка."));
+            return;
+        }
+        try
+        {
+            _settings.Save(_settingsPath);
+            Report(T("Язык изменён. Выбор языка сохранён."));
+        }
+        catch (Exception ex) { Report(T("Не удалось сохранить язык. ") + ex.Message, true); }
+    }
+
+    private void AddBinding()
+    {
+        var next = _favorites.FirstOrDefault(f => !_rows.Any(b => b.PresetId == f.Id));
+        if (next == null)
+        {
+            Report(_favorites.Count == 0
+                ? T("Добавьте пресеты Game в избранное в GG и нажмите «Обновить из Sonar».")
+                : T("Все избранные пресеты уже добавлены. Для других пресетов обновите избранное в GG."));
+            return;
+        }
+        _rows.Add(new() { PresetId = next.Id });
+        _grid.CurrentCell = _grid.Rows[_rows.Count - 1].Cells["Device"];
+    }
+
+    private void AddButton(string key, Func<Task> action)
+    {
+        var button = Localized(new Button { AutoSize = true }, key);
         button.Click += async (_, _) => { try { await action(); } catch (Exception ex) { Report(ErrorText(ex), true); } };
         _toolbar.Controls.Add(button);
     }
@@ -126,23 +204,31 @@ public partial class Form1 : Form
 
     private void UpdateChoices()
     {
-        var presets = new List<Choice> { new("", "— выберите пресет —") };
+        var presets = new List<Choice> { new("", T("— выберите пресет —")) };
         presets.AddRange(_favorites);
         foreach (string id in _rows.Select(b => b.PresetId).Where(id => id.Length > 0).Distinct())
-            if (!presets.Any(c => c.Id == id)) presets.Add(new(id, "Недоступный пресет: " + id));
-        var devices = new List<Choice> { new("", "Не менять устройство") };
+            if (!presets.Any(c => c.Id == id)) presets.Add(new(id, T("Недоступный пресет: ") + id));
+        var devices = new List<Choice> { new("", T("Не менять устройство")) };
         devices.AddRange(_devices);
         foreach (string id in _rows.Select(b => b.DeviceId).Where(id => id.Length > 0).Distinct())
-            if (!devices.Any(c => c.Id == id)) devices.Add(new(id, "Недоступное устройство: " + id));
+            if (!devices.Any(c => c.Id == id)) devices.Add(new(id, T("Недоступное устройство: ") + id));
         ((DataGridViewComboBoxColumn)_grid.Columns["Preset"]!).DataSource = presets;
         ((DataGridViewComboBoxColumn)_grid.Columns["Device"]!).DataSource = devices;
     }
+
+    private static bool StartHidden =>
+#if DEBUG
+        false; // Debug runs always show the window.
+#else
+        Environment.GetCommandLineArgs().Any(a => a.Equals("--tray", StringComparison.OrdinalIgnoreCase));
+#endif
 
     protected override async void OnShown(EventArgs e)
     {
         base.OnShown(e);
         RegisterSettings();
-        if (Environment.GetCommandLineArgs().Any(a => a.Equals("--tray", StringComparison.OrdinalIgnoreCase))) Hide();
+        // A fresh installation always shows setup, even if launched with --tray.
+        if (_settings.Bindings.Count > 0 && _startupError == null && StartHidden) Hide();
         if (_startupError != null) Report(_startupError, true);
         await RefreshAsync();
     }
@@ -167,8 +253,12 @@ public partial class Form1 : Form
             _settings.Favorites = _favorites.ToList();
             _settings.Devices = _devices.ToList();
             RebuildMenu();
-            if (_startupError == null) _settings.Save();
-            Report($"Избранных пресетов: {_favorites.Count}. Устройств: {_devices.Count}. Изменения сочетаний и устройств применяются кнопкой «Сохранить».");
+            if (_startupError == null) _settings.Save(_settingsPath);
+            Report(_favorites.Count == 0
+                ? T("В Sonar Game нет избранных пресетов. Отметьте нужные пресеты избранными в GG и обновите список.")
+                : _settings.Bindings.Count == 0
+                    ? T("Найдено пресетов: {0}, устройств: {1}. Нажмите «Добавить», выберите устройство и сочетание, затем «Сохранить». Для перебора задайте отдельное сочетание ниже таблицы.", _favorites.Count, _devices.Count)
+                    : T("Избранных пресетов: {0}. Устройств: {1}. Изменения сочетаний и устройств применяются кнопкой «Сохранить».", _favorites.Count, _devices.Count));
         }
         catch (Exception ex) { if (!_closing) Report(ErrorText(ex), true); }
         finally { SetBusy(false); }
@@ -180,25 +270,25 @@ public partial class Form1 : Form
         BindingContext?[_rows]?.EndCurrentEdit();
         var candidate = new AppSettings { Bindings = _rows.Select(b => new PresetBinding
             { PresetId = b.PresetId, DeviceId = b.DeviceId, Hotkey = b.Hotkey }).ToList(),
-            Favorites = _favorites.ToList(), Devices = _devices.ToList(), CycleHotkey = _cycle.Text };
+            Favorites = _favorites.ToList(), Devices = _devices.ToList(), CycleHotkey = _cycle.Text, Language = _settings.Language };
         var used = new HashSet<Hotkey>();
         var presetIds = new HashSet<string>();
         foreach (var row in candidate.Bindings)
         {
-            if (string.IsNullOrEmpty(row.PresetId)) throw new ArgumentException("Выберите пресет для каждой строки или удалите пустую строку.");
-            if (!presetIds.Add(row.PresetId)) throw new ArgumentException("Каждый пресет должен встречаться в таблице один раз.");
-            var hotkey = Hotkey.Parse(row.Hotkey);
-            if (hotkey is { } key && !used.Add(key)) throw new ArgumentException("Сочетания клавиш не должны повторяться.");
+            if (string.IsNullOrEmpty(row.PresetId)) throw new ArgumentException(T("Выберите пресет для каждой строки или удалите пустую строку."));
+            if (!presetIds.Add(row.PresetId)) throw new ArgumentException(T("Каждый пресет должен встречаться в таблице один раз."));
+            var hotkey = Hotkey.Parse(row.Hotkey, _settings.Language);
+            if (hotkey is { } key && !used.Add(key)) throw new ArgumentException(T("Сочетания клавиш не должны повторяться."));
         }
-        if (Hotkey.Parse(candidate.CycleHotkey) is { } cycle && !used.Add(cycle))
-            throw new ArgumentException("Сочетание для перебора уже назначено пресету.");
+        if (Hotkey.Parse(candidate.CycleHotkey, _settings.Language) is { } cycle && !used.Add(cycle))
+            throw new ArgumentException(T("Сочетание для перебора уже назначено пресету."));
         // Register first; a conflict leaves the previous saved configuration active.
         var previous = _settings;
         _settings = candidate;
         try
         {
             RegisterSettings(throwOnError: true);
-            candidate.Save();
+            candidate.Save(_settingsPath);
         }
         catch
         {
@@ -208,7 +298,7 @@ public partial class Form1 : Form
         }
         _startupError = null;
         RebuildMenu();
-        Report("Настройки сохранены. Горячие клавиши уже работают.");
+        Report(T("Настройки сохранены. Горячие клавиши уже работают."));
     }
 
     private void ClearHotkeys()
@@ -226,9 +316,9 @@ public partial class Form1 : Form
         {
             try
             {
-                if (Hotkey.Parse(text) is not { } key) return;
+                if (Hotkey.Parse(text, _settings.Language) is not { } key) return;
                 if (!RegisterHotKey(Handle, id, key.Modifiers | 0x4000, (uint)key.Key))
-                    throw new InvalidOperationException($"Не удалось назначить {text}: сочетание занято или запрещено Windows (код {Marshal.GetLastWin32Error()}).");
+                    throw new InvalidOperationException(T("Не удалось назначить {0}: сочетание занято или запрещено Windows (код {1}).", text, Marshal.GetLastWin32Error()));
                 _registered.Add(id);
                 if (binding != null) _hotkeys[id] = binding;
             }
@@ -278,7 +368,7 @@ public partial class Form1 : Form
             var available = (await sonar.Configs.GetAllAsync(Channel.Game, ct)).Where(c => c.IsFavorite).ToDictionary(c => c.Id);
             var favorites = _settings.Bindings.Select(b => b.PresetId).Distinct()
                 .Where(available.ContainsKey).Select(id => available[id]).ToList();
-            if (favorites.Count == 0) throw new InvalidOperationException("Нет доступных избранных пресетов из настроек. Добавьте пресеты в избранное GG и в таблицу.");
+            if (favorites.Count == 0) throw new InvalidOperationException(T("Нет доступных избранных пресетов из настроек. Добавьте пресеты в избранное GG и в таблицу."));
             var current = await sonar.Configs.GetSelectedAsync(Channel.Game, ct);
             var next = favorites[(favorites.FindIndex(c => c.Id == current?.Id) + 1) % favorites.Count];
             var binding = _settings.Bindings.FirstOrDefault(b => b.PresetId == next.Id)
@@ -311,7 +401,7 @@ public partial class Form1 : Form
     {
         var configs = await sonar.Configs.GetAllAsync(Channel.Game, ct);
         var target = configs.FirstOrDefault(c => c.Id == binding.PresetId)
-            ?? throw new InvalidOperationException("Пресет отсутствует в Sonar Game. Обновите список и выберите его заново.");
+            ?? throw new InvalidOperationException(T("Пресет отсутствует в Sonar Game. Обновите список и выберите его заново."));
         var undo = new Stack<Func<CancellationToken, Task>>();
         var previous = await sonar.Configs.GetSelectedAsync(Channel.Game, ct);
         string deviceName = "";
@@ -321,7 +411,7 @@ public partial class Form1 : Form
             {
                 var devices = await sonar.Devices.GetAllAsync(AudioDataFlow.Render, false, ct);
                 var device = devices.FirstOrDefault(d => d.Id == binding.DeviceId)
-                    ?? throw new InvalidOperationException("Устройство вывода недоступно. Подключите его или выберите другое в настройках.");
+                    ?? throw new InvalidOperationException(T("Устройство вывода недоступно. Подключите его или выберите другое в настройках."));
                 deviceName = device.Name;
                 var mode = await sonar.Mode.GetAsync(ct);
                 if (mode == Mode.Classic)
@@ -330,28 +420,28 @@ public partial class Form1 : Form
                     foreach (Channel channel in new[] { Channel.Game, Channel.Chat, Channel.Media, Channel.Aux })
                     {
                         var old = routes.FirstOrDefault(r => r.Channel == channel)
-                            ?? throw new InvalidOperationException($"Sonar не вернул устройство канала {channel}.");
+                            ?? throw new InvalidOperationException(T("Sonar не вернул устройство канала {0}.", channel));
                         undo.Push(token => sonar.Redirections.SetClassicDeviceAsync(channel, old.DeviceId, token));
                         await sonar.Redirections.SetClassicDeviceAsync(channel, device.Id, ct);
                     }
                     var confirmed = await sonar.Redirections.GetClassicRedirectionsAsync(ct);
                     if (new[] { Channel.Game, Channel.Chat, Channel.Media, Channel.Aux }.Any(c => !confirmed.Any(r => r.Channel == c && r.DeviceId == device.Id)))
-                        throw new InvalidOperationException("Sonar не подтвердил смену устройства вывода.");
+                        throw new InvalidOperationException(T("Sonar не подтвердил смену устройства вывода."));
                 }
                 else
                 {
                     var old = (await sonar.Redirections.GetStreamRedirectionsAsync(ct)).Personal
-                        ?? throw new InvalidOperationException("Sonar не вернул устройство Personal.");
+                        ?? throw new InvalidOperationException(T("Sonar не вернул устройство Personal."));
                     undo.Push(token => sonar.Redirections.SetMixDeviceAsync(Mix.Personal, old.DeviceId, token));
                     await sonar.Redirections.SetMixDeviceAsync(Mix.Personal, device.Id, ct);
                     if ((await sonar.Redirections.GetStreamRedirectionsAsync(ct)).Personal?.DeviceId != device.Id)
-                        throw new InvalidOperationException("Sonar не подтвердил смену устройства Personal.");
+                        throw new InvalidOperationException(T("Sonar не подтвердил смену устройства Personal."));
                 }
             }
             if (previous != null) undo.Push(token => sonar.Configs.SelectAsync(previous.Id, token));
             await sonar.Configs.SelectAsync(target.Id, ct);
             if ((await sonar.Configs.GetSelectedAsync(Channel.Game, ct))?.Id != target.Id)
-                throw new InvalidOperationException("Sonar не подтвердил выбор пресета.");
+                throw new InvalidOperationException(T("Sonar не подтвердил выбор пресета."));
         }
         catch (Exception ex)
         {
@@ -361,7 +451,7 @@ public partial class Form1 : Form
             while (undo.TryPop(out var restore))
                 try { await restore(rollback.Token); } catch { restored = false; }
             throw new InvalidOperationException(ErrorText(ex) + (restored
-                ? " Предыдущие настройки восстановлены." : " Восстановить все настройки не удалось; проверьте выход и пресет в GG."), ex);
+                ? T(" Предыдущие настройки восстановлены.") : T(" Восстановить все настройки не удалось; проверьте выход и пресет в GG.")), ex);
         }
         _selectedId = target.Id;
         RebuildMenu();
@@ -372,8 +462,8 @@ public partial class Form1 : Form
     {
         foreach (ToolStripItem item in _menu.Items.Cast<ToolStripItem>().ToArray()) item.Dispose();
         _menu.Items.Clear();
-        _menu.Items.Add("Настройки", null, (_, _) => ShowWindow());
-        var presets = new ToolStripMenuItem("Избранные пресеты") { Enabled = !_busy && _favorites.Count > 0 };
+        _menu.Items.Add(T("Настройки"), null, (_, _) => ShowWindow());
+        var presets = new ToolStripMenuItem(T("Избранные пресеты"));
         foreach (var favorite in _settings.Bindings.Select(b => _favorites.FirstOrDefault(f => f.Id == b.PresetId)).OfType<Choice>().DistinctBy(f => f.Id))
         {
             var binding = _settings.Bindings.FirstOrDefault(b => b.PresetId == favorite.Id) ?? new PresetBinding { PresetId = favorite.Id };
@@ -381,11 +471,12 @@ public partial class Form1 : Form
             item.Click += async (_, _) => await ApplyAsync(binding);
             presets.DropDownItems.Add(item);
         }
+        presets.Enabled = !_busy && presets.DropDownItems.Count > 0;
         _menu.Items.Add(presets);
-        _menu.Items.Add(new ToolStripMenuItem("Следующий пресет", null, async (_, _) => await CycleAsync()) { Enabled = !_busy });
-        _menu.Items.Add(new ToolStripMenuItem("Обновить из Sonar", null, async (_, _) => await RefreshAsync()) { Enabled = !_busy });
+        _menu.Items.Add(new ToolStripMenuItem(T("Следующий пресет"), null, async (_, _) => await CycleAsync()) { Enabled = !_busy && presets.DropDownItems.Count > 0 });
+        _menu.Items.Add(new ToolStripMenuItem(T("Обновить из Sonar"), null, async (_, _) => await RefreshAsync()) { Enabled = !_busy });
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add("Выход", null, (_, _) => { _exit = true; Close(); });
+        _menu.Items.Add(T("Выход"), null, (_, _) => { _exit = true; Close(); });
     }
 
     private void SetBusy(bool busy)
@@ -393,17 +484,18 @@ public partial class Form1 : Form
         _busy = busy;
         if (_closing) return;
         _toolbar.Enabled = _grid.Enabled = _cycle.Enabled = !busy;
+        _languagePicker.Enabled = !busy;
         RebuildMenu();
     }
 
-    private static string ErrorText(Exception ex) => ex switch
+    private string ErrorText(Exception ex) => ex switch
     {
-        SteelSeriesNotFoundException => "SteelSeries GG не найден или не запущен. Запустите GG.",
-        SonarNotRunningException => "Sonar недоступен. Включите Sonar в SteelSeries GG.",
-        DiscoveryException => "Не удалось обнаружить GG/Sonar. Проверьте, что GG запущен и Sonar включён. " + ex.Message,
-        SonarWrongModeException => "Операция недоступна в текущем режиме Sonar. " + ex.Message,
-        OperationCanceledException => "Sonar не ответил вовремя. Проверьте GG и повторите попытку.",
-        HttpRequestException => "Нет соединения с Sonar. Проверьте, что GG запущен. " + ex.Message,
+        SteelSeriesNotFoundException => T("SteelSeries GG не найден или не запущен. Запустите GG."),
+        SonarNotRunningException => T("Sonar недоступен. Включите Sonar в SteelSeries GG."),
+        DiscoveryException => T("Не удалось обнаружить GG/Sonar. Проверьте, что GG запущен и Sonar включён. ") + ex.Message,
+        SonarWrongModeException => T("Операция недоступна в текущем режиме Sonar. ") + ex.Message,
+        OperationCanceledException => T("Sonar не ответил вовремя. Проверьте GG и повторите попытку."),
+        HttpRequestException => T("Нет соединения с Sonar. Проверьте, что GG запущен. ") + ex.Message,
         _ => ex.Message
     };
 
@@ -411,11 +503,11 @@ public partial class Form1 : Form
     {
         if (_closing || IsDisposed) return;
         _output.Text = message;
-        if (error || notify) _tray.ShowBalloonTip(4000, error ? "SonarHotkeys — ошибка" : "Sonar — выбран пресет",
+        if (error || notify) _tray.ShowBalloonTip(4000, error ? T("SonarHotkeys — ошибка") : T("Sonar — выбран пресет"),
             message.Length > 250 ? message[..247] + "…" : message, error ? ToolTipIcon.Error : ToolTipIcon.Info);
     }
 
-    private void ShowWindow()
+    internal void ShowWindow()
     {
         if (_closing) return;
         Show();

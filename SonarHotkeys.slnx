@@ -1,3 +1,6 @@
 <Solution>
   <Project Path="SonarHotkeys/SonarHotkeys.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/SonarHotkeys.Checks/SonarHotkeys.Checks.csproj" />
+  </Folder>
 </Solution>

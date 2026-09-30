@@ -16,43 +16,42 @@ public sealed class AppSettings
     public List<PresetBinding> Bindings { get; set; } = [];
     public List<Choice> Favorites { get; set; } = [];
     public List<Choice> Devices { get; set; } = [];
-    public string CycleHotkey { get; set; } = "Ctrl + Alt + F12";
+    public string CycleHotkey { get; set; } = "";
+    public string Language { get; set; } = TextCatalog.DefaultLanguage;
 
     public static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SonarHotkeys", "settings.json");
 
-    public static AppSettings Load()
+    public static AppSettings Load(string? filePath = null)
     {
-        if (!File.Exists(FilePath)) return Defaults();
-        var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath))
-            ?? throw new InvalidDataException("Файл настроек пуст.");
+        filePath ??= FilePath;
+        if (!File.Exists(filePath)) return Defaults();
+        var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(filePath))
+            ?? throw new InvalidDataException(TextCatalog.Get("Файл настроек пуст."));
+        settings.Language = TextCatalog.NormalizeLanguage(settings.Language);
         if (settings.Bindings is null || settings.Favorites is null || settings.Devices is null ||
             settings.CycleHotkey is null || settings.Bindings.Any(b => b is null || b.PresetId is null || b.DeviceId is null || b.Hotkey is null) ||
             settings.Favorites.Concat(settings.Devices).Any(c => c is null || c.Id is null || c.Name is null))
-            throw new InvalidDataException("Некорректный формат настроек.");
+            throw new InvalidDataException(TextCatalog.Get("Некорректный формат настроек.", settings.Language));
         return settings;
     }
 
-    public void Save()
+    public void Save(string? filePath = null)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        string temporary = FilePath + ".tmp";
+        filePath = Path.GetFullPath(filePath ?? FilePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        string temporary = filePath + ".tmp";
         File.WriteAllText(temporary, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
-        File.Move(temporary, FilePath, true);
+        File.Move(temporary, filePath, true);
     }
 
-    public static AppSettings Defaults() => new()
-    {
-        Favorites = [new("a7efa934-1bd7-48c1-af3d-c3f95c0571b1", "The Witcher 3"),
-            new("870df8c1-af0b-4eca-acb6-3207c1b4a5da", "War Thunder *")],
-        Bindings = [new() { PresetId = "a7efa934-1bd7-48c1-af3d-c3f95c0571b1", Hotkey = "Ctrl + Alt + D1" },
-            new() { PresetId = "870df8c1-af0b-4eca-acb6-3207c1b4a5da", Hotkey = "Ctrl + Alt + D2" }]
-    };
+    // Every user selects presets, outputs and shortcuts from their own installation.
+    public static AppSettings Defaults() => new();
 }
 
 internal readonly record struct Hotkey(uint Modifiers, Keys Key)
 {
-    public static Hotkey? Parse(string text)
+    public static Hotkey? Parse(string text, string? language = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
         uint modifiers = 0;
@@ -69,12 +68,12 @@ internal readonly record struct Hotkey(uint Modifiers, Keys Key)
                     var token = part.Length == 1 && char.IsDigit(part[0]) ? "D" + part : part;
                     if (key != Keys.None || !Enum.TryParse(token, true, out key) || !Enum.IsDefined(key) ||
                         key is Keys.None or Keys.ControlKey or Keys.Menu or Keys.ShiftKey or Keys.LWin or Keys.RWin || (int)key > 255)
-                        throw new ArgumentException($"Некорректное сочетание: {text}");
+                        throw new ArgumentException(TextCatalog.Get("Некорректное сочетание: {0}", language, text));
                     break;
             }
         }
         if (key == Keys.None || modifiers == 0)
-            throw new ArgumentException($"Укажите Ctrl, Alt, Shift или Win и клавишу: {text}");
+            throw new ArgumentException(TextCatalog.Get("Укажите Ctrl, Alt, Shift или Win и клавишу: {0}", language, text));
         return new(modifiers, key);
     }
 
