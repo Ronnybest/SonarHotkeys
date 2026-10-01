@@ -10,151 +10,494 @@
     </Window.SystemBackdrop>
 
     <Grid>
+        <Grid.Resources>
+            <!-- A row in the style of Windows Settings: icon, label with an optional hint, and a control on the right. -->
+            <Style x:Key="CardStyle" TargetType="Grid">
+                <Setter Property="MinHeight" Value="60" />
+                <Setter Property="Padding" Value="16,8" />
+                <Setter Property="ColumnSpacing" Value="16" />
+                <Setter Property="CornerRadius" Value="{StaticResource ControlCornerRadius}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+            </Style>
+            <Style x:Key="CardIconStyle" TargetType="FontIcon">
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="HintStyle" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+            <Style x:Key="IconButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="Width" Value="36" />
+                <Setter Property="Height" Value="32" />
+                <Setter Property="Padding" Value="0" />
+            </Style>
+            <x:Double x:Key="CardControlWidth">280</x:Double>
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
         <!-- Title bar: the content extends into it. -->
-        <Grid x:Name="AppTitleBar" Padding="16,0,0,0">
+        <Grid x:Name="AppTitleBar" Grid.ColumnSpan="2" Padding="16,0,0,0">
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                 <Image Source="ms-appx:///Assets/AppIcon.png" Width="16" Height="16" />
                 <TextBlock Text="SonarHotkeys" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" Padding="24,4,24,0" ColumnSpacing="24">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Spacing="6">
-                <TextBlock x:Name="HeadingText" Style="{StaticResource TitleTextBlockStyle}" />
-                <TextBlock x:Name="HelpText" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
-            <!-- A menu button rather than a ComboBox: a ComboBox opens so that the selected item covers it,
-                 which pushed the list upwards whenever English was selected. -->
-            <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Top">
-                <TextBlock Text="Язык / Language" />
-                <DropDownButton x:Name="LanguageButton" Width="160" HorizontalContentAlignment="Left">
-                    <DropDownButton.Flyout>
-                        <!-- Filled from the available text catalogs. -->
-                        <MenuFlyout x:Name="LanguageMenu" Placement="BottomEdgeAlignedLeft">
-                            <!-- As wide as the button. -->
-                            <MenuFlyout.MenuFlyoutPresenterStyle>
-                                <Style TargetType="MenuFlyoutPresenter">
-                                    <Setter Property="MinWidth" Value="160" />
-                                    <Setter Property="MaxWidth" Value="160" />
-                                </Style>
-                            </MenuFlyout.MenuFlyoutPresenterStyle>
-                        </MenuFlyout>
-                    </DropDownButton.Flyout>
-                </DropDownButton>
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row="2" Padding="24,20,24,8">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button x:Name="RefreshButton" Click="OnRefresh">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE72C;" FontSize="14" />
-                        <TextBlock x:Name="RefreshText" />
-                    </StackPanel>
+        <!-- Sidebar: the fixed channels, and the app settings at the bottom. -->
+        <Grid Grid.Row="1" Padding="4,0,4,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid Padding="16,0,4,6">
+                <TextBlock x:Name="ChannelsHeading" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                <Button x:Name="RefreshButton" Style="{StaticResource IconButtonStyle}" HorizontalAlignment="Right" Click="OnRefresh">
+                    <FontIcon Glyph="&#xE72C;" FontSize="14" />
                 </Button>
-                <Button x:Name="AddButton" Click="OnAdd">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE710;" FontSize="14" />
-                        <TextBlock x:Name="AddText" />
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-            <ToggleSwitch x:Name="AutostartSwitch" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="0" Toggled="OnAutostartToggled" />
-        </Grid>
-
-        <Grid Grid.Row="3">
-            <ListView x:Name="RowsList" ItemsSource="{x:Bind Rows}" SelectionMode="None" Padding="12,0,12,0">
-                <ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Setter Property="Padding" Value="12,4" />
-                    </Style>
-                </ListView.ItemContainerStyle>
+            </Grid>
+            <ListView x:Name="ChannelsList" Grid.Row="1" ItemsSource="{x:Bind Channels}" SelectionMode="Single" SelectionChanged="OnChannelSelected">
                 <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="local:BindingRow">
-                        <Grid Padding="16,12,16,14" ColumnSpacing="12" CornerRadius="8" BorderThickness="1"
-                              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                    <DataTemplate x:DataType="local:ChannelRow">
+                        <Grid Padding="4,8" ColumnSpacing="14">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="4*" />
-                                <ColumnDefinition Width="4*" />
-                                <ColumnDefinition Width="3*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <ComboBox Header="{x:Bind PresetHeader, Mode=OneWay}" PlaceholderText="{x:Bind PresetPlaceholder, Mode=OneWay}"
-                                      ItemsSource="{x:Bind Presets, Mode=OneWay}" SelectedItem="{x:Bind Preset, Mode=TwoWay}"
-                                      HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="local:ChoiceItem">
-                                        <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <ComboBox Grid.Column="1" Header="{x:Bind DeviceHeader, Mode=OneWay}"
-                                      ItemsSource="{x:Bind Devices, Mode=OneWay}" SelectedItem="{x:Bind Device, Mode=TwoWay}"
-                                      HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="local:ChoiceItem">
-                                        <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <TextBox Grid.Column="2" Header="{x:Bind HotkeyHeader, Mode=OneWay}" PlaceholderText="{x:Bind HotkeyPlaceholder, Mode=OneWay}"
-                                     Text="{x:Bind Hotkey, Mode=OneWay}" IsReadOnly="True"
-                                     PreviewKeyDown="OnHotkeyKeyDown" GotFocus="OnHotkeyFocus" LostFocus="OnHotkeyLostFocus" />
-                            <Button Grid.Column="3" VerticalAlignment="Bottom" Height="32" Click="OnApplyRow"
-                                    ToolTipService.ToolTip="{x:Bind ApplyLabel, Mode=OneWay}" AutomationProperties.Name="{x:Bind ApplyLabel, Mode=OneWay}">
-                                <FontIcon Glyph="&#xE73E;" FontSize="14" />
-                            </Button>
-                            <Button Grid.Column="4" VerticalAlignment="Bottom" Height="32" Click="OnRemoveRow"
-                                    ToolTipService.ToolTip="{x:Bind RemoveLabel, Mode=OneWay}" AutomationProperties.Name="{x:Bind RemoveLabel, Mode=OneWay}">
-                                <FontIcon Glyph="&#xE74D;" FontSize="14" />
-                            </Button>
+                            <FontIcon Glyph="{x:Bind Glyph}" FontSize="16" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Bind Name, Mode=OneWay}" />
+                                <TextBlock Text="{x:Bind Details, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <!-- Marks the channel that the next preset shortcut steps through. -->
+                            <FontIcon Grid.Column="2" Glyph="&#xE8AB;" FontSize="14" Margin="0,0,4,0" VerticalAlignment="Center"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="{x:Bind CycleVisibility, Mode=OneWay}" />
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
-            <TextBlock x:Name="EmptyText" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
-                       MaxWidth="440" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            <ListView x:Name="FooterList" Grid.Row="2" SelectionMode="Single" SelectionChanged="OnFooterSelected">
+                <ListViewItem x:Name="HelpItem">
+                    <StackPanel Orientation="Horizontal" Spacing="14" Padding="4,9">
+                        <FontIcon Glyph="&#xE897;" FontSize="16" />
+                        <TextBlock x:Name="HelpItemText" />
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem x:Name="SettingsItem">
+                    <StackPanel Orientation="Horizontal" Spacing="14" Padding="4,9">
+                        <FontIcon Glyph="&#xE713;" FontSize="16" />
+                        <TextBlock x:Name="SettingsItemText" />
+                    </StackPanel>
+                </ListViewItem>
+            </ListView>
         </Grid>
 
-        <Grid Grid.Row="4" Margin="24,8,24,20" Padding="16,12" ColumnSpacing="12" CornerRadius="8" BorderThickness="1"
-              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="CycleLabel" VerticalAlignment="Center" />
-            <TextBox x:Name="CycleBox" Grid.Column="1" IsReadOnly="True" Width="260" HorizontalAlignment="Left"
-                     PreviewKeyDown="OnHotkeyKeyDown" GotFocus="OnHotkeyFocus" LostFocus="OnHotkeyLostFocus" />
-            <Button x:Name="NextButton" Grid.Column="2" Click="OnNext">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon Glyph="&#xE8AB;" FontSize="14" />
-                    <TextBlock x:Name="NextText" />
+        <!-- Content: a raised layer like the page area of Windows Settings. -->
+        <Grid Grid.Row="1" Grid.Column="1" CornerRadius="8,0,0,0" BorderThickness="1,1,0,0"
+              Background="{ThemeResource LayerFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+
+            <Grid x:Name="ChannelPage" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Padding="32,24,32,0" ColumnSpacing="14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <FontIcon x:Name="ChannelIcon" FontSize="24" VerticalAlignment="Center" />
+                    <TextBlock x:Name="ChannelHeading" Grid.Column="1" Style="{StaticResource TitleTextBlockStyle}" VerticalAlignment="Center" />
+                    <!-- Only a note: the channel's sound is not affected, just which presets the next preset shortcut steps through. -->
+                    <StackPanel x:Name="CycleBadge" Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <FontIcon Glyph="&#xE8AB;" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock x:Name="CycleBadgeText" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button x:Name="CycleHereButton" Grid.Column="2" VerticalAlignment="Center" Click="OnCycleHere">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE8AB;" FontSize="14" />
+                            <TextBlock x:Name="CycleHereText" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <Grid Grid.Row="1" Padding="33,24,32,8" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="PresetsHeading" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="PresetsHint" Grid.Column="1" Style="{StaticResource HintStyle}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                    <Button x:Name="AddButton" Grid.Column="2" Click="OnAdd">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xE710;" FontSize="14" />
+                            <TextBlock x:Name="AddText" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <ListView x:Name="RowsList" Grid.Row="2" SelectionMode="None" CanReorderItems="True" AllowDrop="True" Padding="32,0,32,72">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,0,0,4" />
+                            <Setter Property="MinHeight" Value="0" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="local:BindingRow">
+                            <Grid>
+                                <Grid Padding="12,10,16,10" ColumnSpacing="10" CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1"
+                                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="5*" />
+                                        <ColumnDefinition Width="5*" />
+                                        <ColumnDefinition Width="3*" MinWidth="150" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- A drag handle: the card is reordered by dragging it from here, where no control takes the pointer. -->
+                                    <FontIcon Glyph="&#xE76F;" FontSize="16" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                              ToolTipService.ToolTip="{x:Bind DragLabel, Mode=OneWay}" AutomationProperties.Name="{x:Bind DragLabel, Mode=OneWay}" />
+                                    <ComboBox Grid.Column="1" PlaceholderText="{x:Bind PresetPlaceholder, Mode=OneWay}" HorizontalAlignment="Stretch"
+                                              ItemsSource="{x:Bind Presets, Mode=OneWay}" SelectedItem="{x:Bind Preset, Mode=TwoWay}"
+                                              AutomationProperties.Name="{x:Bind PresetLabel, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind PresetLabel, Mode=OneWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="local:ChoiceItem">
+                                                <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <ComboBox Grid.Column="2" HorizontalAlignment="Stretch"
+                                              ItemsSource="{x:Bind Devices, Mode=OneWay}" SelectedItem="{x:Bind Device, Mode=TwoWay}"
+                                              AutomationProperties.Name="{x:Bind DeviceLabel, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind DeviceLabel, Mode=OneWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="local:ChoiceItem">
+                                                <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBox Grid.Column="3" PlaceholderText="{x:Bind HotkeyPlaceholder, Mode=OneWay}" Text="{x:Bind Hotkey, Mode=OneWay}" IsReadOnly="True"
+                                             AutomationProperties.Name="{x:Bind HotkeyTip, Mode=OneWay}" ToolTipService.ToolTip="{x:Bind HotkeyTip, Mode=OneWay}"
+                                             PreviewKeyDown="OnHotkeyKeyDown" GotFocus="OnHotkeyFocus" LostFocus="OnHotkeyLostFocus" />
+                                    <!-- For the preset Sonar has selected now, the check becomes a filled accent badge; applying again still works. -->
+                                    <Button Grid.Column="4" Style="{StaticResource IconButtonStyle}" Click="OnApplyRow"
+                                            ToolTipService.ToolTip="{x:Bind ApplyTip, Mode=OneWay}" AutomationProperties.Name="{x:Bind ApplyTip, Mode=OneWay}">
+                                        <Grid>
+                                            <FontIcon Glyph="&#xE73E;" FontSize="14" Visibility="{x:Bind ApplyVisibility, Mode=OneWay}" />
+                                            <FontIcon Glyph="&#xEC61;" FontSize="18" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                      Visibility="{x:Bind SelectedVisibility, Mode=OneWay}" />
+                                        </Grid>
+                                    </Button>
+                                    <Button Grid.Column="5" Style="{StaticResource IconButtonStyle}" Click="OnRemoveRow"
+                                            ToolTipService.ToolTip="{x:Bind RemoveLabel, Mode=OneWay}" AutomationProperties.Name="{x:Bind RemoveLabel, Mode=OneWay}">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                                    </Button>
+                                </Grid>
+                                <!-- An accent outline over the card of the selected preset; it never takes the pointer. -->
+                                <Border CornerRadius="{StaticResource ControlCornerRadius}" BorderThickness="1" IsHitTestVisible="False"
+                                        BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" Visibility="{x:Bind SelectedVisibility, Mode=OneWay}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <TextBlock x:Name="EmptyText" Grid.Row="2" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           MaxWidth="420" Margin="32,0,32,72" TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+
+            <ScrollViewer x:Name="SettingsPage" Visibility="Collapsed">
+                <StackPanel Padding="32,24,32,72" Spacing="4">
+                    <TextBlock x:Name="SettingsHeading" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,16" />
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE774;" Style="{StaticResource CardIconStyle}" />
+                        <TextBlock x:Name="LanguageLabel" Grid.Column="1" VerticalAlignment="Center" />
+                        <!-- A menu button rather than a ComboBox: a ComboBox opens so that the selected item covers it,
+                             which pushed the list upwards whenever English was selected. -->
+                        <DropDownButton x:Name="LanguageButton" Grid.Column="2" Width="160" HorizontalContentAlignment="Left" VerticalAlignment="Center">
+                            <DropDownButton.Flyout>
+                                <!-- Filled from the available text catalogs; as wide as the button. -->
+                                <MenuFlyout x:Name="LanguageMenu" Placement="BottomEdgeAlignedLeft">
+                                    <MenuFlyout.MenuFlyoutPresenterStyle>
+                                        <Style TargetType="MenuFlyoutPresenter">
+                                            <Setter Property="MinWidth" Value="160" />
+                                            <Setter Property="MaxWidth" Value="160" />
+                                        </Style>
+                                    </MenuFlyout.MenuFlyoutPresenterStyle>
+                                </MenuFlyout>
+                            </DropDownButton.Flyout>
+                        </DropDownButton>
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE7E8;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="AutostartLabel" />
+                            <TextBlock x:Name="AutostartHint" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="AutostartSwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" Margin="0,0,-12,0"
+                                      VerticalAlignment="Center" Toggled="OnAutostartToggled" />
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE7F5;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="AllSoundLabel" />
+                            <TextBlock x:Name="AllSoundHint" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="AllSoundSwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" Margin="0,0,-12,0"
+                                      VerticalAlignment="Center" Toggled="OnAllSoundToggled" />
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="1,20,0,6">
+                        <TextBlock x:Name="ShortcutsHeading" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                        <TextBlock x:Name="ShortcutsHint" Style="{StaticResource HintStyle}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE8FD;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="ChannelLabel" />
+                            <TextBlock x:Name="ChannelHint" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                        <TextBox x:Name="ChannelBox" Grid.Column="2" Width="{StaticResource CardControlWidth}" VerticalAlignment="Center" IsReadOnly="True"
+                                 PreviewKeyDown="OnHotkeyKeyDown" GotFocus="OnHotkeyFocus" LostFocus="OnHotkeyLostFocus" />
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE8AB;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="CycleLabel" />
+                            <TextBlock x:Name="CycleHint" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                        <TextBox x:Name="CycleBox" Grid.Column="2" Width="{StaticResource CardControlWidth}" VerticalAlignment="Center" IsReadOnly="True"
+                                 PreviewKeyDown="OnHotkeyKeyDown" GotFocus="OnHotkeyFocus" LostFocus="OnHotkeyLostFocus" />
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE765;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="NumbersLabel" />
+                            <TextBlock x:Name="NumbersHint" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                        <ToggleSwitch x:Name="NumbersSwitch" Grid.Column="2" OnContent="" OffContent="" MinWidth="0" Margin="0,0,-12,0"
+                                      VerticalAlignment="Center" Toggled="OnNumbersToggled" />
+                    </Grid>
                 </StackPanel>
-            </Button>
-        </Grid>
+            </ScrollViewer>
 
-        <!-- Floats over the bottom of the list, so showing or hiding it never moves the content.
-             A solid backing, since the InfoBar's own background is translucent. -->
-        <Border x:Name="StatusPanel" Grid.Row="3" Visibility="Collapsed" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
-                Margin="24,0,24,12" CornerRadius="4" BorderThickness="1" Canvas.ZIndex="1"
-                Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-            <InfoBar x:Name="Status" IsOpen="True" IsClosable="True" Closing="OnStatusClosing" />
-        </Border>
+            <!-- The shortcut values are filled in when the page opens, so they show the shortcuts in use now. -->
+            <ScrollViewer x:Name="HelpPage" Visibility="Collapsed">
+                <StackPanel Padding="32,24,32,72" Spacing="4">
+                    <TextBlock x:Name="HelpHeading" Style="{StaticResource TitleTextBlockStyle}" Margin="0,0,0,-8" />
+                    <TextBlock x:Name="HelpHowItWorks" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="1,20,0,6" />
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE7FC;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpChannelsTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpChannelsText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE73E;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpPresetsTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpPresetsText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE8AB;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpCycledTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpCycledText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xEC61;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpSelectedTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpSelectedText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock x:Name="HelpShortcuts" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="1,20,0,6" />
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE8FD;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpChannelKeyTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpChannelKeyText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                        <TextBlock x:Name="HelpChannelKeyValue" Grid.Column="2" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE8AB;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpCycleKeyTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpCycleKeyText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                        <TextBlock x:Name="HelpCycleKeyValue" Grid.Column="2" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE765;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpNumbersTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpNumbersText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                        <TextBlock x:Name="HelpNumbersValue" Grid.Column="2" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE76F;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpOwnTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpOwnText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock x:Name="HelpProblems" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="1,20,0,6" />
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE783;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpNoSonarTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpNoSonarText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE734;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpNoPresetTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpNoPresetText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE765;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpBusyTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpBusyText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid Style="{StaticResource CardStyle}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE7F5;" Style="{StaticResource CardIconStyle}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,4">
+                            <TextBlock x:Name="HelpNoSoundTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="HelpNoSoundText" Style="{StaticResource HintStyle}" />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,20,0,0">
+                        <HyperlinkButton x:Name="HelpProject" NavigateUri="https://github.com/Ronnybest/SonarHotkeys" />
+                        <TextBlock x:Name="HelpVersion" Style="{StaticResource HintStyle}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Floats over the bottom of the page, so showing or hiding it never moves the content.
+                 A solid backing, since the InfoBar's own background is translucent. -->
+            <Border x:Name="StatusPanel" Visibility="Collapsed" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                    Margin="32,0,32,16" CornerRadius="4" BorderThickness="1" Canvas.ZIndex="1"
+                    Background="{ThemeResource SolidBackgroundFillColorTertiaryBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <InfoBar x:Name="Status" IsOpen="True" IsClosable="True" Closing="OnStatusClosing" />
+            </Border>
+        </Grid>
     </Grid>
 </Window>

@@ -2,27 +2,30 @@
 
 # SonarHotkeys
 
-**Switch SteelSeries Sonar presets and output devices with global hotkeys.**
+**Switch SteelSeries Sonar presets and devices for every channel with global hotkeys.**
 
 [![Latest release](https://img.shields.io/github/v/release/Ronnybest/SonarHotkeys?label=release)](https://github.com/Ronnybest/SonarHotkeys/releases/latest) [![Downloads](https://img.shields.io/github/downloads/Ronnybest/SonarHotkeys/total)](https://github.com/Ronnybest/SonarHotkeys/releases) [![License: MIT](https://img.shields.io/github/license/Ronnybest/SonarHotkeys)](LICENSE.txt) ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D4) ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 
 [**Download**](https://github.com/Ronnybest/SonarHotkeys/releases/latest) · [Changelog](CHANGELOG.md) · [Русский](README.ru.md)
 
-<img src="docs/screenshot.png" alt="SonarHotkeys settings window with three preset bindings" width="820">
+<img src="docs/screenshot.png" alt="SonarHotkeys window with the Game channel and three presets" width="820">
 
 </div>
 
 ## Why
 
-Changing a Sonar preset and output device together usually means opening GG and clicking through Sonar's settings. SonarHotkeys sits in the tray and does both with a keystroke: press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F1</kbd> for your game preset on speakers, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F2</kbd> for your FPS preset on headphones.
+Changing a Sonar preset, or the device a channel plays on, usually means opening GG and clicking through Sonar. SonarHotkeys sits in the tray and does it with a keystroke: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd> for your game preset on speakers, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>2</kbd> for your FPS preset on headphones, <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd> for your streaming microphone preset.
 
 ## Features
 
-- **One hotkey, preset and output together.** Each binding selects a Game preset and, optionally, a physical output device.
-- **Cycle hotkey.** A separate shortcut steps through your configured presets, starting from the one currently selected in GG.
-- **Tray menu.** Pick any configured preset without opening the window.
-- **Safe switching.** If Sonar rejects part of a change, the previous preset and outputs are restored.
-- **English and Russian interface**, switchable at any time; more languages can be added as a single file.
+- **Every channel.** Game, Chat, Media, Aux and Mic each have their own presets. A preset can switch a device too: speakers or headphones for the output channels, a microphone for Mic.
+- **Favorites appear by themselves.** Presets you mark as favorites in GG show up in their channel on start; your other presets are one click away.
+- **Cycle with two shortcuts.** One picks the channel to step through, the other steps through its presets; <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd> jump to a preset by number.
+- **Own shortcuts.** Any preset can have a shortcut of its own that works at any time.
+- **Always in sync.** The preset Sonar has selected is marked, even when you change it in GG.
+- **Safe switching.** If Sonar rejects part of a change, the previous presets and devices are restored.
+- **Tray menu** with every configured preset, and instant notifications.
+- **English and Russian interface**; more languages can be added as a single file.
 - **Native Windows look.** WinUI 3 with Mica and light and dark themes that follow Windows.
 - **Starts with Windows** if you want it to, hidden in the tray.
 - **Installer or portable.** A per-user MSI that needs no administrator rights, or a ZIP to run from any folder. Neither needs .NET or the Windows App SDK installed.
@@ -35,37 +38,46 @@ Changing a Sonar preset and output device together usually means opening GG and 
 ## Quick start
 
 1. From the [latest release](https://github.com/Ronnybest/SonarHotkeys/releases/latest), download and run `SonarHotkeys-win-x64.msi`. It installs for your account only, adds SonarHotkeys to the Start menu and starts it when you finish. For a portable copy, download `SonarHotkeys-win-x64.zip` instead, extract the `SonarHotkeys` folder anywhere and run `SonarHotkeys.exe` from it.
-2. In GG, mark the **Game** presets you want to use as favorites.
-3. In SonarHotkeys, click **Refresh from Sonar**, then **Add** a binding for each preset.
-4. Choose an output device, or keep **Keep current device** to switch only the preset.
-5. Click the shortcut field and press a combination with <kbd>Ctrl</kbd>, <kbd>Alt</kbd> or <kbd>Shift</kbd>. <kbd>Delete</kbd> clears it.
-6. That is it: changes are saved as you make them. A new shortcut works as soon as you leave its field or switch to another window, even with the settings window closed.
+2. In GG, mark the presets you want to switch as favorites, in any channel.
+3. SonarHotkeys adds them to their channels by itself. Click ↻ at the top left after changing favorites in GG, or **Add** for a preset that is not a favorite.
+4. On a preset's card, choose a device, or keep **Keep current device** to switch only the preset.
+5. That is it: press <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F12</kbd> to step through the Game presets, or <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd> to pick one. Changes are saved as you make them, and the shortcuts work with the window closed.
 
-The ✓ button on a card applies the binding right away, to try it. Each preset and each shortcut may appear only once. A binding without a shortcut is still available from the tray menu and the cycle hotkey.
+The ✓ button on a card applies its preset right away; ═ drags the card to another place. The **Help** page in the app explains the rest.
+
+## Shortcuts
+
+| Shortcut | Effect |
+| --- | --- |
+| <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F11</kbd> | Changes the cycled channel, marked ⇄, to the next channel with presets. The sound does not change. |
+| <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F12</kbd> | Applies the next preset of the cycled channel, after the one selected in GG now. |
+| <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd>…<kbd>9</kbd> | Applies the preset at that place in the cycled channel's list. Dragging a card renumbers the list. |
+| A preset's own shortcut | Applies that preset at any time, whichever channel is cycled. Click the field on the card and press a combination with <kbd>Ctrl</kbd>, <kbd>Alt</kbd> or <kbd>Shift</kbd>; <kbd>Delete</kbd> clears it. |
+
+The cycling shortcuts can be changed or cleared on the **Settings** page, and the number shortcuts turned off there if another application needs them. The cycled channel changes only with its shortcut or the button on a channel page; applying a preset any other way leaves it as it is.
 
 ## How switching works
 
-| Sonar mode | What changes |
+| Sonar mode | What a preset's device changes |
 | --- | --- |
-| Classic | Output device of the **Game, Chat, Media** and **Aux** channels |
-| Streamer | Output device of the **Personal** mix |
-| Both | The selected **Game** preset |
+| Classic | Output channels: the output device of **Game, Chat, Media** and **Aux**, or of the preset's channel only when **Switch all sound** is off. Mic: the microphone. |
+| Streamer | Output channels: the output device of the **Personal** mix. Mic: the microphone. |
 
-SonarHotkeys changes Sonar's routing only; the Windows default output device stays the same, so applications must play through Sonar's virtual devices.
+The preset itself is always selected in its channel. SonarHotkeys changes Sonar's routing only; the Windows default output device stays the same, so applications must play through Sonar's virtual devices.
 
 ## Tray and startup
 
-Closing the window hides it to the tray. Click the tray icon or choose **Settings** to reopen it, and **Exit** to quit. Starting the app again brings up the window of the running instance.
+Closing the window hides it to the tray. Click the tray icon or choose **Settings** to reopen it, and **Exit** to quit. The tray menu lists the presets of every channel, with the cycled channel and the selected presets checked. Starting the app again brings up the window of the running instance.
 
 | Argument | Effect |
 | --- | --- |
-| `--tray` | Start hidden in the tray. Ignored until at least one binding is saved, and in Debug builds. |
+| `--tray` | Start hidden in the tray. Ignored until at least one preset is configured, and in Debug builds. |
 
-Turn on **Start with Windows** in the window or the tray menu to start SonarHotkeys hidden in the tray when you sign in. It adds a shortcut to your Startup folder, which also appears on the Startup apps page of Task Manager. The portable copy updates the shortcut when you move its folder, and uninstalling the MSI removes it.
+Turn on **Start with Windows** on the **Settings** page or in the tray menu to start SonarHotkeys hidden in the tray when you sign in. It adds a shortcut to your Startup folder, which also appears on the Startup apps page of Task Manager. The portable copy updates the shortcut when you move its folder, and uninstalling the MSI removes it.
 
 ## Settings
 
-Settings are stored per user in `%LOCALAPPDATA%\SonarHotkeys\settings.json`, separately from the app, so updating or uninstalling keeps your bindings, including those saved by version 1.x. Preset and device IDs are specific to each computer, so set them up again on a new machine.
+Settings are stored per user in `%LOCALAPPDATA%\SonarHotkeys\settings.json`, separately from the app, so updating or uninstalling keeps your presets. Version 3.0 converts settings of 1.x and 2.x: their bindings become Game presets with the same devices, after which version 2.x can no longer read them. Preset and device IDs are specific to each computer, so set them up again on a new machine.
 
 To update the installed app, run the new MSI: it closes the running app, replaces it and starts it again. To update the portable copy, exit from the tray and replace the `SonarHotkeys` folder.
 
@@ -75,10 +87,11 @@ A damaged settings file is never overwritten automatically: the app starts with 
 
 | Problem | Solution |
 | --- | --- |
-| "GG or Sonar is unavailable" | Start GG, enable Sonar, then click **Refresh from Sonar** |
-| No presets in the list | Mark Game presets as favorites in GG and refresh |
-| An output device is missing | Connect it, refresh and choose it again |
+| "GG or Sonar is unavailable" | Start GG, enable Sonar, then click ↻ |
+| A preset is missing | Mark it as a favorite in GG and click ↻, or add it with **Add** |
+| An output device is missing | Connect it, click ↻ and choose it again |
 | "The shortcut is in use" | Another application or Windows owns it; choose a different combination |
+| The sound does not move | Applications must play through Sonar's virtual devices rather than straight to your speakers |
 | No notifications | Check Windows notification settings and Do Not Disturb |
 | "Windows protected your PC" when starting the MSI or EXE | The files are not code-signed yet. Choose **More info**, then **Run anyway** |
 
@@ -92,7 +105,7 @@ dotnet run --project tests/SonarHotkeys.Checks/SonarHotkeys.Checks.csproj -c Rel
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Publish.ps1
 ```
 
-The checks use temporary settings files and a scratch Startup folder, and never touch your real settings, startup entries or Sonar routing. `Publish.ps1` produces `artifacts/SonarHotkeys-win-x64.zip` and `artifacts/SonarHotkeys-win-x64.msi`, both with the application folder, documentation and licenses only. The installer is built with [WiX Toolset](https://wixtoolset.org) 5, restored from NuGet during the build.
+The checks use temporary settings files and a scratch Startup folder, and never touch your real settings, startup entries or Sonar routing. `Publish.ps1` produces `artifacts/SonarHotkeys-win-x64.zip` and `artifacts/SonarHotkeys-win-x64.msi`, both with the application folder, documentation and licenses only. The installer is built with [WiX Toolset](https://wixtoolset.org) 5, restored from NuGet during the build. The version comes from `<Version>` in `SonarHotkeys.WinUI/SonarHotkeys.WinUI.csproj`; keep `app.manifest` in step with it.
 
 | Project | Contents |
 | --- | --- |
@@ -101,7 +114,7 @@ The checks use temporary settings files and a scratch Startup folder, and never 
 | `installer` | The per-user MSI: Start menu shortcut, upgrades and removal of the autostart shortcut |
 | `tests/SonarHotkeys.Checks` | Checks for the core library and the translation files |
 
-Debug builds always show the window and accept `--settings=<file>` to use a separate settings file and `--skip-refresh` to keep the cached presets without contacting Sonar.
+Debug builds always show the window and accept `--settings=<file>` to use a separate settings file and `--skip-refresh` to keep the cached presets without contacting Sonar. Without `--settings`, a Debug build works on your real settings file.
 
 ## Contributing
 
@@ -109,7 +122,7 @@ Issues and pull requests are welcome.
 
 ### Translations
 
-Interface texts live in [`SonarHotkeys.Core/Strings`](SonarHotkeys.Core/Strings), one JSON file per language with stable keys such as `Toolbar.Add`. English (`en.json`) is the reference.
+Interface texts live in [`SonarHotkeys.Core/Strings`](SonarHotkeys.Core/Strings), one JSON file per language with stable keys such as `Page.Add`. English (`en.json`) is the reference.
 
 To add a language, copy `en.json` to `<code>.json`, where `<code>` is the two-letter language code (for example `de.json`), set `Language.Name` to the language's own name and translate the values. Keep placeholders such as `{0}` in place. The language appears in the language menu automatically; no code changes are needed. When the Windows display language has a catalog, the app starts in it.
 

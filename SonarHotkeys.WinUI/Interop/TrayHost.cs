@@ -103,6 +103,10 @@ internal sealed unsafe class TrayHost : IDisposable
 
     public void ShowBalloon(string title, string text, bool error)
     {
+        // Windows queues notifications, so stepping through presets quickly showed each one only after the previous
+        // closed. An empty text removes the current one first, and the new one appears at once.
+        var clear = CreateData(NIF_INFO);
+        Shell_NotifyIcon(NIM_MODIFY, &clear);
         var data = CreateData(NIF_INFO);
         Copy(title, data.szInfoTitle, 64);
         Copy(text, data.szInfo, 256);
